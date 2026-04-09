@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       action: "borrow",
       id: body.id,
       borrower: body.borrower,
+      phone: body.phone,
       borrowedAt: body.borrowedAt,
       dueDate: body.dueDate,
     });
