@@ -11,6 +11,10 @@ type Book = {
   borrower: string;
   borrowedAt: string;
   dueDate: string;
+  bookcode: string;
+  borrowerType?: string;
+  membercode?: string;
+  phone?: string;
 };
 
 function Badge({
