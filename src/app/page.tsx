@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 type BookStatus = "available" | "borrowed" | "overdue";
+type BorrowMode = "member" | "guest";
+type ScanStep = "member" | "book";
 
 type Book = {
   id: number;
@@ -149,6 +151,18 @@ function getTodayString() {
   return local.toISOString().split("T")[0];
 }
 
+function getDefaultDueDate(baseDate = getTodayString()) {
+  const date = new Date(baseDate);
+  date.setDate(date.getDate() + 14);
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60 * 1000);
+  return local.toISOString().split("T")[0];
+}
+
+function normalizeCode(value: string) {
+  return value.trim().toUpperCase();
+}
+
 function getBookStatus(book: Book): BookStatus {
   if (!book.borrower || !book.dueDate) return "available";
 
@@ -190,11 +204,15 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | BookStatus>("all");
 
-  const [selectedBookId, setSelectedBookId] = useState("");
+  const [borrowMode, setBorrowMode] = useState<BorrowMode>("member");
+  const [scanStep, setScanStep] = useState<ScanStep>("member");
+  const [scanInput, setScanInput] = useState("");
+  const [memberCode, setMemberCode] = useState("");
   const [borrower, setBorrower] = useState("");
   const [phone, setPhone] = useState("");
   const [borrowedAt, setBorrowedAt] = useState(getTodayString());
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(getDefaultDueDate());
+  const [currentBookCode, setCurrentBookCode] = useState("");
 
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -246,10 +264,10 @@ export default function HomePage() {
       const matchesQuery =
         book.title.toLowerCase().includes(lowerQuery) ||
         book.author.toLowerCase().includes(lowerQuery) ||
-        book.borrower.toLowerCase().includes(lowerQuery);
+        book.borrower.toLowerCase().includes(lowerQuery) ||
+        (book.bookcode || "").toLowerCase().includes(lowerQuery);
 
-      const matchesFilter =
-        filter === "all" ? true : book.status === filter;
+      const matchesFilter = filter === "all" ? true : book.status === filter;
 
       return matchesQuery && matchesFilter;
     });
@@ -275,30 +293,77 @@ export default function HomePage() {
     return { total, available, borrowed, overdue, dueToday };
   }, [enrichedBooks]);
 
-  const availableBooks = enrichedBooks.filter(
-    (book) => book.status === "available"
-  );
-
   function resetBorrowForm() {
-    setSelectedBookId("");
+    setScanInput("");
+    setMemberCode("");
     setBorrower("");
     setPhone("");
     setBorrowedAt(getTodayString());
-    setDueDate("");
+    setDueDate(getDefaultDueDate());
+    setCurrentBookCode("");
+    setScanStep("member");
   }
 
-  async function handleBorrowSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function submitBorrow(payload: {
+    borrowerType: "member" | "guest";
+    memberCode?: string;
+    borrower: string;
+    phone?: string;
+    borrowedAt: string;
+    dueDate: string;
+    bookCode: string;
+  }) {
+    try {
+      setSubmitting(true);
+
+      const response = await fetch("/api/books", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          borrowerType: payload.borrowerType,
+          memberCode: payload.memberCode || "",
+          borrower: payload.borrower,
+          phone: payload.phone || "",
+          borrowedAt: payload.borrowedAt,
+          dueDate: payload.dueDate,
+          bookCode: payload.bookCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "대여 등록에 실패했습니다.");
+      }
+
+      await fetchBooks();
+
+      const borrowerText =
+        payload.borrowerType === "member"
+          ? payload.memberCode || payload.borrower
+          : `${payload.borrower} (${payload.phone || "-"})`;
+
+      resetBorrowForm();
+      setMessage(`대여 완료: ${payload.bookCode} / ${borrowerText}`);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "대여 등록에 실패했습니다."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleScanSubmit() {
     setMessage("");
     setErrorMessage("");
 
-    if (!selectedBookId) {
-      setErrorMessage("대여할 도서를 선택해주세요.");
-      return;
-    }
+    const code = normalizeCode(scanInput);
 
-    if (!borrower.trim()) {
-      setErrorMessage("대여자 이름을 입력해주세요.");
+    if (!code) {
+      setErrorMessage("바코드를 입력하거나 스캔해주세요.");
       return;
     }
 
@@ -317,42 +382,68 @@ export default function HomePage() {
       return;
     }
 
-    try {
-      setSubmitting(true);
+    if (borrowMode === "member") {
+      if (scanStep === "member") {
+        if (!code.startsWith("CND") || code.startsWith("CNDB")) {
+          setErrorMessage("회원 바코드를 스캔해주세요.");
+          return;
+        }
 
-      const response = await fetch("/api/books", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: Number(selectedBookId),
-          borrower: borrower.trim(),
-          phone: phone.trim(),
-          borrowedAt,
-          dueDate,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "대여 등록에 실패했습니다.");
+        setMemberCode(code);
+        setScanInput("");
+        setScanStep("book");
+        setMessage(`회원 확인 완료: ${code}. 이제 도서 바코드를 스캔해주세요.`);
+        return;
       }
 
-      await fetchBooks();
-      resetBorrowForm();
-      setMessage("대여 등록이 완료되었습니다. 대여 기록에도 저장되었습니다.");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "대여 등록에 실패했습니다."
-      );
-    } finally {
-      setSubmitting(false);
+      if (!code.startsWith("CNDB")) {
+        setErrorMessage("도서 바코드를 스캔해주세요.");
+        return;
+      }
+
+      setCurrentBookCode(code);
+
+      await submitBorrow({
+        borrowerType: "member",
+        memberCode,
+        borrower: memberCode,
+        phone: "",
+        borrowedAt,
+        dueDate,
+        bookCode: code,
+      });
+
+      return;
     }
+
+    if (!borrower.trim()) {
+      setErrorMessage("비회원 이름을 입력해주세요.");
+      return;
+    }
+
+    if (!phone.trim()) {
+      setErrorMessage("비회원 연락처를 입력해주세요.");
+      return;
+    }
+
+    if (!code.startsWith("CNDB")) {
+      setErrorMessage("도서 바코드를 스캔해주세요.");
+      return;
+    }
+
+    setCurrentBookCode(code);
+
+    await submitBorrow({
+      borrowerType: "guest",
+      borrower: borrower.trim(),
+      phone: phone.trim(),
+      borrowedAt,
+      dueDate,
+      bookCode: code,
+    });
   }
 
-  async function handleReturn(bookId: number) {
+  async function handleReturn(bookCode: string, bookId?: number) {
     try {
       setSubmitting(true);
       setMessage("");
@@ -364,6 +455,7 @@ export default function HomePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          bookCode,
           id: bookId,
         }),
       });
@@ -375,7 +467,7 @@ export default function HomePage() {
       }
 
       await fetchBooks();
-      setMessage("반납 처리가 완료되었습니다. 대여 기록도 함께 갱신되었습니다.");
+      setMessage(`반납 처리가 완료되었습니다: ${bookCode}`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "반납 처리에 실패했습니다."
@@ -393,20 +485,20 @@ export default function HomePage() {
             <div className="max-w-3xl">
               <div className="flex flex-wrap gap-2">
                 <Badge>도서 대여 관리</Badge>
-                <Badge tone="sky">대여 기록 자동 저장</Badge>
+                <Badge tone="sky">회원/비회원 대여</Badge>
                 <Badge tone="rose">연체 자동 표시</Badge>
               </div>
 
               <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
                 도서 대여를 한 화면에서
                 <span className="block bg-gradient-to-r from-emerald-500 to-sky-500 bg-clip-text text-transparent">
-                  등록하고, 조회하고, 반납 처리하세요
+                  스캔하고, 등록하고, 반납 처리하세요
                 </span>
               </h1>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                대여 시 대여 기록 시트에 자동 저장되고, 연체 상태가 자동 표시됩니다.
-                서버단에서도 대여 가능 수량을 검사해 중복 대여를 방지합니다.
+                회원은 회원 바코드와 도서 바코드를 순서대로 스캔해 대여할 수 있고,
+                비회원은 이름과 연락처 입력 후 도서 바코드로 대여할 수 있습니다.
               </p>
             </div>
 
@@ -421,9 +513,9 @@ export default function HomePage() {
                     </p>
                   </div>
                   <div className="rounded-2xl border border-gray-100 p-4">
-                    <p className="font-semibold text-gray-900">대여 제한</p>
+                    <p className="font-semibold text-gray-900">스캔 흐름</p>
                     <p className="mt-2">
-                      서버에서 동일 도서의 대여 가능 수량을 직접 검사합니다.
+                      회원은 회원코드 → 도서코드, 비회원은 정보 입력 → 도서코드
                     </p>
                   </div>
                 </div>
@@ -444,73 +536,169 @@ export default function HomePage() {
           <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <SectionTitle
               title="대여 등록"
-              desc="대여 가능한 도서를 선택하고 대여 정보를 입력하세요."
+              desc="회원은 바코드 2번, 비회원은 정보 입력 후 도서 바코드를 스캔하세요."
             />
 
-            <form className="mt-6 space-y-4" onSubmit={handleBorrowSubmit}>
-              <Select
-                label="도서 선택"
-                value={selectedBookId}
-                onChange={setSelectedBookId}
-                options={[
-                  { label: "대여할 도서를 선택하세요", value: "" },
-                  ...availableBooks.map((book) => ({
-                    label: `${book.title}${book.author ? ` · ${book.author}` : ""}`,
-                    value: String(book.id),
-                  })),
-                ]}
-              />
-
-              <Input
-                label="대여자 이름"
-                value={borrower}
-                onChange={setBorrower}
-                placeholder="이름을 입력하세요"
-              />
-
-              <Input
-                label="연락처"
-                value={phone}
-                onChange={setPhone}
-                placeholder="예: 010-1234-5678"
-              />
-
-              <Input
-                label="대여일"
-                type="date"
-                value={borrowedAt}
-                onChange={setBorrowedAt}
-              />
-
-              <Input
-                label="반납예정일"
-                type="date"
-                value={dueDate}
-                onChange={setDueDate}
-                min={borrowedAt || undefined}
-              />
-
-              <div className="flex gap-3">
+            <div className="mt-6 space-y-4">
+              <div className="flex gap-2">
                 <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  onClick={() => {
+                    setBorrowMode("member");
+                    resetBorrowForm();
+                    setMessage("");
+                    setErrorMessage("");
+                  }}
+                  className={`inline-flex flex-1 items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    borrowMode === "member"
+                      ? "bg-gray-900 text-white shadow-sm"
+                      : "bg-white text-gray-900 ring-1 ring-gray-200 hover:bg-gray-50"
+                  }`}
                 >
-                  {submitting ? "처리 중..." : "대여 등록"}
+                  회원 대여
                 </button>
                 <button
                   type="button"
                   onClick={() => {
+                    setBorrowMode("guest");
                     resetBorrowForm();
-                    setMessage("입력값을 초기화했습니다.");
+                    setMessage("");
                     setErrorMessage("");
                   }}
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+                  className={`inline-flex flex-1 items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    borrowMode === "guest"
+                      ? "bg-gray-900 text-white shadow-sm"
+                      : "bg-white text-gray-900 ring-1 ring-gray-200 hover:bg-gray-50"
+                  }`}
                 >
-                  초기화
+                  비회원 대여
                 </button>
               </div>
-            </form>
+
+              {borrowMode === "member" ? (
+                <>
+                  <div className="rounded-2xl bg-sky-50 p-4 text-sm text-sky-800 ring-1 ring-sky-100">
+                    {scanStep === "member"
+                      ? "회원 바코드를 스캔하세요."
+                      : `회원 ${memberCode} 확인됨. 이제 도서 바코드를 스캔하세요.`}
+                  </div>
+
+                  <Input
+                    label={scanStep === "member" ? "회원 바코드" : "도서 바코드"}
+                    value={scanInput}
+                    onChange={setScanInput}
+                    placeholder={scanStep === "member" ? "CND0000" : "CNDB0000"}
+                  />
+
+                  <Input
+                    label="대여일"
+                    type="date"
+                    value={borrowedAt}
+                    onChange={setBorrowedAt}
+                  />
+
+                  <Input
+                    label="반납예정일"
+                    type="date"
+                    value={dueDate}
+                    onChange={setDueDate}
+                    min={borrowedAt || undefined}
+                  />
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleScanSubmit}
+                      className="inline-flex flex-1 items-center justify-center rounded-2xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {submitting
+                        ? "처리 중..."
+                        : scanStep === "member"
+                          ? "회원 확인"
+                          : "도서 대여 처리"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetBorrowForm();
+                        setMessage("입력값을 초기화했습니다.");
+                        setErrorMessage("");
+                      }}
+                      className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+                    >
+                      초기화
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800 ring-1 ring-amber-100">
+                    비회원 이름과 연락처를 입력한 뒤 도서 바코드를 스캔하세요.
+                  </div>
+
+                  <Input
+                    label="비회원 이름"
+                    value={borrower}
+                    onChange={setBorrower}
+                    placeholder="이름을 입력하세요"
+                  />
+
+                  <Input
+                    label="비회원 연락처"
+                    value={phone}
+                    onChange={setPhone}
+                    placeholder="예: 010-1234-5678"
+                  />
+
+                  <Input
+                    label="도서 바코드"
+                    value={scanInput}
+                    onChange={setScanInput}
+                    placeholder="CNDB0000"
+                  />
+
+                  <Input
+                    label="대여일"
+                    type="date"
+                    value={borrowedAt}
+                    onChange={setBorrowedAt}
+                  />
+
+                  <Input
+                    label="반납예정일"
+                    type="date"
+                    value={dueDate}
+                    onChange={setDueDate}
+                    min={borrowedAt || undefined}
+                  />
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleScanSubmit}
+                      className="inline-flex flex-1 items-center justify-center rounded-2xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {submitting ? "처리 중..." : "비회원 대여 처리"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetBorrowForm();
+                        setMessage("입력값을 초기화했습니다.");
+                        setErrorMessage("");
+                      }}
+                      className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+                    >
+                      초기화
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="mt-4 min-h-12">
               {message ? (
@@ -519,6 +707,11 @@ export default function HomePage() {
               {errorMessage ? (
                 <p className="mt-2 text-sm font-medium text-rose-700">
                   {errorMessage}
+                </p>
+              ) : null}
+              {currentBookCode ? (
+                <p className="mt-2 text-xs text-gray-500">
+                  마지막 처리 도서코드: {currentBookCode}
                 </p>
               ) : null}
             </div>
@@ -536,7 +729,7 @@ export default function HomePage() {
                   label="검색"
                   value={query}
                   onChange={setQuery}
-                  placeholder="도서명, 저자, 대여자 검색"
+                  placeholder="도서명, 저자, 대여자, 도서코드 검색"
                 />
                 <Select
                   label="상태 필터"
@@ -571,6 +764,9 @@ export default function HomePage() {
                         도서명
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
+                        도서코드
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                         저자
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
@@ -594,7 +790,7 @@ export default function HomePage() {
                     {loading ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="px-4 py-10 text-center text-sm text-gray-500"
                         >
                           데이터를 불러오는 중입니다...
@@ -603,7 +799,7 @@ export default function HomePage() {
                     ) : filteredBooks.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="px-4 py-10 text-center text-sm text-gray-500"
                         >
                           조건에 맞는 도서가 없습니다.
@@ -619,6 +815,9 @@ export default function HomePage() {
                             <p className="font-semibold text-gray-900">
                               {book.title}
                             </p>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-700">
+                            {book.bookcode || "-"}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-700">
                             {book.author || "-"}
@@ -646,7 +845,9 @@ export default function HomePage() {
                               <button
                                 type="button"
                                 disabled={submitting}
-                                onClick={() => handleReturn(book.id)}
+                                onClick={() =>
+                                  handleReturn(book.bookcode, book.id)
+                                }
                                 className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 반납 처리
@@ -662,7 +863,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge tone="gray">검색 가능</Badge>
+              <Badge tone="gray">도서코드 검색 가능</Badge>
               <Badge tone="emerald">대여 가능 도서 확인</Badge>
               <Badge tone="sky">대여 중 목록 확인</Badge>
               <Badge tone="rose">연체 도서 즉시 확인</Badge>
