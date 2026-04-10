@@ -94,9 +94,9 @@ export async function POST(request: NextRequest) {
     const data = await callAppsScript("POST", {
       action: "borrow",
       borrowerType: body.borrowerType,
-      memberCode: body.memberCode,
-      borrower: body.borrower,
-      phone: body.phone,
+      memberCode: body.memberCode || "",
+      borrower: body.borrower || "",
+      phone: body.phone || "",
       borrowedAt: body.borrowedAt,
       dueDate: body.dueDate,
       bookCode: body.bookCode,
