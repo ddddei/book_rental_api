@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type BookStatus = "available" | "borrowed" | "overdue";
 type BorrowMode = "member" | "guest";
@@ -218,6 +218,14 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [cameraOpen, setCameraOpen] = useState(false);
+
+  const html5QrCodeRef = useRef<any>(null);
+  const scannerRegionId = "reader";
+
   async function fetchBooks() {
     try {
       setLoading(true);
@@ -356,11 +364,11 @@ export default function HomePage() {
     }
   }
 
-  async function handleScanSubmit() {
+  async function handleScanSubmit(rawCode?: string) {
     setMessage("");
     setErrorMessage("");
 
-    const code = normalizeCode(scanInput);
+    const code = normalizeCode(rawCode ?? scanInput);
 
     if (!code) {
       setErrorMessage("바코드를 입력하거나 스캔해주세요.");
@@ -477,6 +485,89 @@ export default function HomePage() {
     }
   }
 
+  async function stopCamera() {
+    try {
+      if (html5QrCodeRef.current) {
+        const state = html5QrCodeRef.current.getState?.();
+        if (state === 2 || state === 1) {
+          await html5QrCodeRef.current.stop();
+        }
+        await html5QrCodeRef.current.clear();
+      }
+    } catch {
+      // ignore
+    } finally {
+      html5QrCodeRef.current = null;
+      setCameraOpen(false);
+      setCameraReady(false);
+      setCameraLoading(false);
+    }
+  }
+
+  async function startCamera() {
+    try {
+      setCameraError("");
+      setCameraLoading(true);
+
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import(
+        "html5-qrcode"
+      );
+
+      if (html5QrCodeRef.current) {
+        await stopCamera();
+      }
+
+      const scanner = new Html5Qrcode(scannerRegionId);
+      html5QrCodeRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 140 },
+          aspectRatio: 1.7778,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.QR_CODE,
+          ],
+        },
+        async (decodedText: string) => {
+          const code = normalizeCode(decodedText);
+
+          try {
+            await stopCamera();
+            await handleScanSubmit(code);
+          } catch {
+            // ignore
+          }
+        },
+        () => {
+          // scan failure callback - ignore noisy events
+        }
+      );
+
+      setCameraOpen(true);
+      setCameraReady(true);
+    } catch (error) {
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "카메라를 시작하지 못했습니다."
+      );
+    } finally {
+      setCameraLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-sky-50">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -498,7 +589,8 @@ export default function HomePage() {
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
                 회원은 회원 바코드와 도서 바코드를 순서대로 스캔해 대여할 수 있고,
-                비회원은 이름과 연락처 입력 후 도서 바코드로 대여할 수 있습니다.
+                비회원은 이름과 연락처 입력 후 도서 바코드를 스캔할 수 있습니다.
+                카메라 스캔도 지원합니다.
               </p>
             </div>
 
@@ -532,7 +624,7 @@ export default function HomePage() {
           <StatCard label="오늘 반납 예정" value={stats.dueToday} help="오늘 반납 예정 도서" />
         </section>
 
-        <section className="mt-8 grid gap-8 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <section className="mt-8 grid gap-8 lg:grid-cols-[420px_minmax(0,1fr)]">
           <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <SectionTitle
               title="대여 등록"
@@ -575,6 +667,44 @@ export default function HomePage() {
                 </button>
               </div>
 
+              <div className="flex gap-3">
+                {!cameraOpen ? (
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    disabled={cameraLoading}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {cameraLoading ? "카메라 준비 중..." : "카메라 스캔 시작"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+                  >
+                    카메라 스캔 종료
+                  </button>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-3">
+                <div
+                  id={scannerRegionId}
+                  className={`overflow-hidden rounded-2xl bg-black ${cameraReady ? "min-h-[260px]" : "min-h-[120px]"}`}
+                />
+                {!cameraOpen ? (
+                  <p className="mt-3 text-sm text-gray-500">
+                    태블릿에서 카메라 스캔 시작을 누르면 후면 카메라가 열립니다.
+                  </p>
+                ) : null}
+                {cameraError ? (
+                  <p className="mt-3 text-sm font-medium text-rose-700">
+                    {cameraError}
+                  </p>
+                ) : null}
+              </div>
+
               {borrowMode === "member" ? (
                 <>
                   <div className="rounded-2xl bg-sky-50 p-4 text-sm text-sky-800 ring-1 ring-sky-100">
@@ -609,7 +739,7 @@ export default function HomePage() {
                     <button
                       type="button"
                       disabled={submitting}
-                      onClick={handleScanSubmit}
+                      onClick={() => handleScanSubmit()}
                       className="inline-flex flex-1 items-center justify-center rounded-2xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {submitting
@@ -678,7 +808,7 @@ export default function HomePage() {
                     <button
                       type="button"
                       disabled={submitting}
-                      onClick={handleScanSubmit}
+                      onClick={() => handleScanSubmit()}
                       className="inline-flex flex-1 items-center justify-center rounded-2xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {submitting ? "처리 중..." : "비회원 대여 처리"}
