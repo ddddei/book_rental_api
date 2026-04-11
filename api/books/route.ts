@@ -39,17 +39,9 @@ async function callAppsScript<T>(
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
       },
-      body: JSON.stringify({
-  action: "borrow",
-  borrowerType: body.borrowerType,
-  memberCode: body.memberCode,
-  borrower: body.borrower,
-  phone: body.phone,
-  borrowedAt: body.borrowedAt,
-  dueDate: body.dueDate,
-  bookCode: body.bookCode,
-  bookTitle: body.bookTitle || "",
-}),
+      body: JSON.stringify(payload || {}),
+      redirect: "follow",
+    });
   }
 
   const text = await response.text();
@@ -100,13 +92,14 @@ export async function POST(request: NextRequest) {
 
     const data = await callAppsScript("POST", {
       action: "borrow",
-      borrowerType: body.borrowerType,
+      borrowerType: body.borrowerType || "",
       memberCode: body.memberCode || "",
       borrower: body.borrower || "",
       phone: body.phone || "",
-      borrowedAt: body.borrowedAt,
-      dueDate: body.dueDate,
-      bookCode: body.bookCode,
+      borrowedAt: body.borrowedAt || "",
+      dueDate: body.dueDate || "",
+      bookCode: body.bookCode || "",
+      bookTitle: body.bookTitle || "",
       id: body.id,
     });
 
@@ -129,7 +122,7 @@ export async function PATCH(request: NextRequest) {
 
     const data = await callAppsScript("POST", {
       action: "return",
-      bookCode: body.bookCode,
+      bookCode: body.bookCode || "",
       id: body.id,
     });
 
