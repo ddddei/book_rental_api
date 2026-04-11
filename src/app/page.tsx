@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type BookStatus = "available" | "borrowed" | "overdue";
 type BorrowMode = "member" | "guest";
-type ScanStep = "member" | "book";
 
 type Book = {
   id: number;
@@ -205,9 +204,7 @@ export default function HomePage() {
   const [filter, setFilter] = useState<"all" | BookStatus>("all");
 
   const [borrowMode, setBorrowMode] = useState<BorrowMode>("member");
-  const [scanStep, setScanStep] = useState<ScanStep>("member");
   const [scanInput, setScanInput] = useState("");
-  const [memberCode, setMemberCode] = useState("");
   const [borrower, setBorrower] = useState("");
   const [phone, setPhone] = useState("");
   const [borrowedAt, setBorrowedAt] = useState(getTodayString());
@@ -303,13 +300,11 @@ export default function HomePage() {
 
   function resetBorrowForm() {
     setScanInput("");
-    setMemberCode("");
     setBorrower("");
     setPhone("");
     setBorrowedAt(getTodayString());
     setDueDate(getDefaultDueDate());
     setCurrentBookCode("");
-    setScanStep("member");
   }
 
   async function submitBorrow(payload: {
@@ -350,7 +345,7 @@ export default function HomePage() {
 
       const borrowerText =
         payload.borrowerType === "member"
-          ? payload.memberCode || payload.borrower
+          ? payload.borrower
           : `${payload.borrower} (${payload.phone || "-"})`;
 
       resetBorrowForm();
@@ -391,16 +386,8 @@ export default function HomePage() {
     }
 
     if (borrowMode === "member") {
-      if (scanStep === "member") {
-        if (!code.startsWith("CND") || code.startsWith("CNDB")) {
-          setErrorMessage("회원 바코드를 스캔해주세요.");
-          return;
-        }
-
-        setMemberCode(code);
-        setScanInput("");
-        setScanStep("book");
-        setMessage(`회원 확인 완료: ${code}. 이제 도서 바코드를 스캔해주세요.`);
+      if (!borrower.trim()) {
+        setErrorMessage("회원 이름을 입력해주세요.");
         return;
       }
 
@@ -413,8 +400,8 @@ export default function HomePage() {
 
       await submitBorrow({
         borrowerType: "member",
-        memberCode,
-        borrower: memberCode,
+        memberCode: "",
+        borrower: borrower.trim(),
         phone: "",
         borrowedAt,
         dueDate,
@@ -509,9 +496,7 @@ export default function HomePage() {
       setCameraError("");
       setCameraLoading(true);
 
-      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import(
-        "html5-qrcode"
-      );
+      const { Html5Qrcode } = await import("html5-qrcode");
 
       if (html5QrCodeRef.current) {
         await stopCamera();
@@ -581,7 +566,7 @@ export default function HomePage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                회원은 회원 바코드와 도서 바코드를 순서대로 스캔해 대여할 수 있고,
+                회원은 회원 이름 입력 후 도서 바코드를 스캔해 대여할 수 있고,
                 비회원은 이름과 연락처 입력 후 도서 바코드를 스캔할 수 있습니다.
                 카메라 스캔도 지원합니다.
               </p>
@@ -600,7 +585,7 @@ export default function HomePage() {
                   <div className="rounded-2xl border border-gray-100 p-4">
                     <p className="font-semibold text-gray-900">스캔 흐름</p>
                     <p className="mt-2">
-                      회원은 회원코드 → 도서코드, 비회원은 정보 입력 → 도서코드
+                      회원은 이름 입력 → 도서코드, 비회원은 정보 입력 → 도서코드
                     </p>
                   </div>
                 </div>
@@ -621,7 +606,7 @@ export default function HomePage() {
           <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <SectionTitle
               title="대여 등록"
-              desc="회원은 바코드 2번, 비회원은 정보 입력 후 도서 바코드를 스캔하세요."
+              desc="회원은 이름 입력 후, 비회원은 이름과 연락처 입력 후 도서 바코드를 스캔하세요."
             />
 
             <div className="mt-6 space-y-4">
@@ -701,16 +686,21 @@ export default function HomePage() {
               {borrowMode === "member" ? (
                 <>
                   <div className="rounded-2xl bg-sky-50 p-4 text-sm text-sky-800 ring-1 ring-sky-100">
-                    {scanStep === "member"
-                      ? "회원 바코드를 스캔하세요."
-                      : `회원 ${memberCode} 확인됨. 이제 도서 바코드를 스캔하세요.`}
+                    회원 이름을 입력한 뒤 도서 바코드를 스캔하세요.
                   </div>
 
                   <Input
-                    label={scanStep === "member" ? "회원 바코드" : "도서 바코드"}
+                    label="회원 이름"
+                    value={borrower}
+                    onChange={setBorrower}
+                    placeholder="회원 이름을 입력하세요"
+                  />
+
+                  <Input
+                    label="도서 바코드"
                     value={scanInput}
                     onChange={setScanInput}
-                    placeholder={scanStep === "member" ? "CND0000" : "CNDB0000"}
+                    placeholder="CNDB0000"
                   />
 
                   <Input
@@ -735,11 +725,7 @@ export default function HomePage() {
                       onClick={() => handleScanSubmit()}
                       className="inline-flex flex-1 items-center justify-center rounded-2xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {submitting
-                        ? "처리 중..."
-                        : scanStep === "member"
-                          ? "회원 확인"
-                          : "도서 대여 처리"}
+                      {submitting ? "처리 중..." : "회원 대여 처리"}
                     </button>
 
                     <button
