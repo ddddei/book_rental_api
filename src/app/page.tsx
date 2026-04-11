@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type BookStatus = "available" | "borrowed" | "overdue";
 type BorrowMode = "member" | "guest";
+type BookInputMode = "barcode" | "title";
 
 type Book = {
   id: number;
@@ -208,7 +209,9 @@ export default function HomePage() {
   const [filter, setFilter] = useState<"all" | BookStatus>("all");
 
   const [borrowMode, setBorrowMode] = useState<BorrowMode>("member");
+  const [bookInputMode, setBookInputMode] = useState<BookInputMode>("barcode");
   const [scanInput, setScanInput] = useState("");
+  const [selectedTitle, setSelectedTitle] = useState("");
   const [borrower, setBorrower] = useState("");
   const [phone, setPhone] = useState("");
   const [borrowedAt, setBorrowedAt] = useState(getTodayString());
@@ -302,13 +305,34 @@ export default function HomePage() {
     return { total, available, borrowed, overdue, dueToday };
   }, [enrichedBooks]);
 
+  const availableTitleOptions = useMemo(() => {
+    const uniqueTitles = Array.from(
+      new Set(
+        enrichedBooks
+          .filter((book) => book.status === "available")
+          .map((book) => book.title.trim())
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b, "ko"));
+
+    return [
+      { label: "도서명을 선택하세요", value: "" },
+      ...uniqueTitles.map((title) => ({
+        label: title,
+        value: title,
+      })),
+    ];
+  }, [enrichedBooks]);
+
   function resetBorrowForm() {
     setScanInput("");
+    setSelectedTitle("");
     setBorrower("");
     setPhone("");
     setBorrowedAt(getTodayString());
     setDueDate(getDefaultDueDate());
     setCurrentBookCode("");
+    setBookInputMode("barcode");
   }
 
   async function submitBorrow(payload: {
@@ -318,7 +342,8 @@ export default function HomePage() {
     phone?: string;
     borrowedAt: string;
     dueDate: string;
-    bookCode: string;
+    bookCode?: string;
+    bookTitle?: string;
   }) {
     try {
       setSubmitting(true);
@@ -335,7 +360,8 @@ export default function HomePage() {
           phone: payload.phone || "",
           borrowedAt: payload.borrowedAt,
           dueDate: payload.dueDate,
-          bookCode: payload.bookCode,
+          bookCode: payload.bookCode || "",
+          bookTitle: payload.bookTitle || "",
         }),
       });
 
@@ -348,9 +374,10 @@ export default function HomePage() {
       await fetchBooks();
 
       const borrowerText = `${payload.borrower} (${payload.phone || "-"})`;
+      const bookText = payload.bookCode || payload.bookTitle || "-";
 
       resetBorrowForm();
-      setMessage(`대여 완료: ${payload.bookCode} / ${borrowerText}`);
+      setMessage(`대여 완료: ${bookText} / ${borrowerText}`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "대여 등록에 실패했습니다."
@@ -366,9 +393,10 @@ export default function HomePage() {
 
     const code = normalizeCode(rawCode ?? scanInput);
     const normalizedPhone = normalizePhone(phone);
+    const normalizedTitle = selectedTitle.trim();
 
-    if (!code) {
-      setErrorMessage("바코드를 입력하거나 스캔해주세요.");
+    if (!code && !normalizedTitle) {
+      setErrorMessage("도서 바코드 또는 도서명을 선택해주세요.");
       return;
     }
 
@@ -398,12 +426,17 @@ export default function HomePage() {
         return;
       }
 
-      if (!code.startsWith("CNDB")) {
+      if (bookInputMode === "barcode" && !code.startsWith("CNDB")) {
         setErrorMessage("도서 바코드를 스캔해주세요.");
         return;
       }
 
-      setCurrentBookCode(code);
+      if (bookInputMode === "title" && !normalizedTitle) {
+        setErrorMessage("도서명을 선택해주세요.");
+        return;
+      }
+
+      setCurrentBookCode(code || normalizedTitle);
 
       await submitBorrow({
         borrowerType: "member",
@@ -412,7 +445,8 @@ export default function HomePage() {
         phone: normalizedPhone,
         borrowedAt,
         dueDate,
-        bookCode: code,
+        bookCode: bookInputMode === "barcode" ? code : "",
+        bookTitle: bookInputMode === "title" ? normalizedTitle : "",
       });
 
       return;
@@ -428,12 +462,17 @@ export default function HomePage() {
       return;
     }
 
-    if (!code.startsWith("CNDB")) {
+    if (bookInputMode === "barcode" && !code.startsWith("CNDB")) {
       setErrorMessage("도서 바코드를 스캔해주세요.");
       return;
     }
 
-    setCurrentBookCode(code);
+    if (bookInputMode === "title" && !normalizedTitle) {
+      setErrorMessage("도서명을 선택해주세요.");
+      return;
+    }
+
+    setCurrentBookCode(code || normalizedTitle);
 
     await submitBorrow({
       borrowerType: "guest",
@@ -441,7 +480,8 @@ export default function HomePage() {
       phone: normalizedPhone,
       borrowedAt,
       dueDate,
-      bookCode: code,
+      bookCode: bookInputMode === "barcode" ? code : "",
+      bookTitle: bookInputMode === "title" ? normalizedTitle : "",
     });
   }
 
@@ -573,9 +613,7 @@ export default function HomePage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                회원은 이름과 전화번호 확인 후 도서 바코드를 스캔해 대여할 수 있고,
-                비회원은 이름과 연락처 입력 후 도서 바코드를 스캔할 수 있습니다.
-                카메라 스캔도 지원합니다.
+                회원은 이름과 전화번호 확인 후 도서를 대여할 수 있고, 비회원은 이름과 연락처 입력 후 도서를 대여할 수 있습니다. 도서 바코드가 없으면 도서명으로도 대여할 수 있습니다.
               </p>
             </div>
 
@@ -590,9 +628,9 @@ export default function HomePage() {
                     </p>
                   </div>
                   <div className="rounded-2xl border border-gray-100 p-4">
-                    <p className="font-semibold text-gray-900">스캔 흐름</p>
+                    <p className="font-semibold text-gray-900">대여 방식</p>
                     <p className="mt-2">
-                      회원은 이름+전화번호 → 도서코드, 비회원은 정보 입력 → 도서코드
+                      회원/비회원 모두 도서 바코드 또는 도서명으로 대여 가능
                     </p>
                   </div>
                 </div>
@@ -613,7 +651,7 @@ export default function HomePage() {
           <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <SectionTitle
               title="대여 등록"
-              desc="회원은 이름/전화번호 확인 후, 비회원은 이름과 연락처 입력 후 도서 바코드를 스캔하세요."
+              desc="회원은 이름/전화번호 확인 후, 비회원은 이름과 연락처 입력 후 도서를 선택하세요."
             />
 
             <div className="mt-6 space-y-4">
@@ -657,10 +695,14 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={startCamera}
-                    disabled={cameraLoading}
+                    disabled={cameraLoading || bookInputMode !== "barcode"}
                     className="inline-flex flex-1 items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {cameraLoading ? "카메라 준비 중..." : "카메라 스캔 시작"}
+                    {cameraLoading
+                      ? "카메라 준비 중..."
+                      : bookInputMode === "barcode"
+                        ? "카메라 스캔 시작"
+                        : "도서명 선택 중"}
                   </button>
                 ) : (
                   <button
@@ -680,7 +722,7 @@ export default function HomePage() {
                 />
                 {!cameraOpen ? (
                   <p className="mt-3 text-sm text-gray-500">
-                    태블릿에서 카메라 스캔 시작을 누르면 후면 카메라가 열립니다.
+                    바코드 모드에서 카메라 스캔 시작을 누르면 후면 카메라가 열립니다.
                   </p>
                 ) : null}
                 {cameraError ? (
@@ -690,10 +732,44 @@ export default function HomePage() {
                 ) : null}
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBookInputMode("barcode");
+                    setSelectedTitle("");
+                    setErrorMessage("");
+                  }}
+                  className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    bookInputMode === "barcode"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "bg-white text-gray-900 ring-1 ring-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  바코드로 선택
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBookInputMode("title");
+                    setScanInput("");
+                    setErrorMessage("");
+                    stopCamera();
+                  }}
+                  className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    bookInputMode === "title"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "bg-white text-gray-900 ring-1 ring-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  도서명으로 선택
+                </button>
+              </div>
+
               {borrowMode === "member" ? (
                 <>
                   <div className="rounded-2xl bg-sky-50 p-4 text-sm text-sky-800 ring-1 ring-sky-100">
-                    회원 이름과 전화번호를 입력한 뒤 도서 바코드를 스캔하세요.
+                    회원 이름과 전화번호를 입력한 뒤, 도서 바코드 또는 도서명을 선택하세요.
                   </div>
 
                   <Input
@@ -710,12 +786,21 @@ export default function HomePage() {
                     placeholder="01012345678 또는 010-1234-5678"
                   />
 
-                  <Input
-                    label="도서 바코드"
-                    value={scanInput}
-                    onChange={setScanInput}
-                    placeholder="CNDB0000"
-                  />
+                  {bookInputMode === "barcode" ? (
+                    <Input
+                      label="도서 바코드"
+                      value={scanInput}
+                      onChange={setScanInput}
+                      placeholder="CNDB0000"
+                    />
+                  ) : (
+                    <Select
+                      label="도서명 선택"
+                      value={selectedTitle}
+                      onChange={setSelectedTitle}
+                      options={availableTitleOptions}
+                    />
+                  )}
 
                   <Input
                     label="대여일"
@@ -758,7 +843,7 @@ export default function HomePage() {
               ) : (
                 <>
                   <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800 ring-1 ring-amber-100">
-                    비회원 이름과 연락처를 입력한 뒤 도서 바코드를 스캔하세요.
+                    비회원 이름과 연락처를 입력한 뒤, 도서 바코드 또는 도서명을 선택하세요.
                   </div>
 
                   <Input
@@ -775,12 +860,21 @@ export default function HomePage() {
                     placeholder="01012345678 또는 010-1234-5678"
                   />
 
-                  <Input
-                    label="도서 바코드"
-                    value={scanInput}
-                    onChange={setScanInput}
-                    placeholder="CNDB0000"
-                  />
+                  {bookInputMode === "barcode" ? (
+                    <Input
+                      label="도서 바코드"
+                      value={scanInput}
+                      onChange={setScanInput}
+                      placeholder="CNDB0000"
+                    />
+                  ) : (
+                    <Select
+                      label="도서명 선택"
+                      value={selectedTitle}
+                      onChange={setSelectedTitle}
+                      options={availableTitleOptions}
+                    />
+                  )}
 
                   <Input
                     label="대여일"
@@ -834,7 +928,7 @@ export default function HomePage() {
               ) : null}
               {currentBookCode ? (
                 <p className="mt-2 text-xs text-gray-500">
-                  마지막 처리 도서코드: {currentBookCode}
+                  마지막 처리 도서: {currentBookCode}
                 </p>
               ) : null}
             </div>
