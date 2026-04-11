@@ -162,6 +162,10 @@ function normalizeCode(value: string) {
   return value.trim().toUpperCase();
 }
 
+function normalizePhone(value: string) {
+  return value.replace(/\D/g, "");
+}
+
 function getBookStatus(book: Book): BookStatus {
   if (!book.borrower || !book.dueDate) return "available";
 
@@ -343,10 +347,7 @@ export default function HomePage() {
 
       await fetchBooks();
 
-      const borrowerText =
-        payload.borrowerType === "member"
-          ? payload.borrower
-          : `${payload.borrower} (${payload.phone || "-"})`;
+      const borrowerText = `${payload.borrower} (${payload.phone || "-"})`;
 
       resetBorrowForm();
       setMessage(`대여 완료: ${payload.bookCode} / ${borrowerText}`);
@@ -364,6 +365,7 @@ export default function HomePage() {
     setErrorMessage("");
 
     const code = normalizeCode(rawCode ?? scanInput);
+    const normalizedPhone = normalizePhone(phone);
 
     if (!code) {
       setErrorMessage("바코드를 입력하거나 스캔해주세요.");
@@ -391,6 +393,11 @@ export default function HomePage() {
         return;
       }
 
+      if (!normalizedPhone) {
+        setErrorMessage("회원 전화번호를 입력해주세요.");
+        return;
+      }
+
       if (!code.startsWith("CNDB")) {
         setErrorMessage("도서 바코드를 스캔해주세요.");
         return;
@@ -402,7 +409,7 @@ export default function HomePage() {
         borrowerType: "member",
         memberCode: "",
         borrower: borrower.trim(),
-        phone: "",
+        phone: normalizedPhone,
         borrowedAt,
         dueDate,
         bookCode: code,
@@ -416,7 +423,7 @@ export default function HomePage() {
       return;
     }
 
-    if (!phone.trim()) {
+    if (!normalizedPhone) {
       setErrorMessage("비회원 연락처를 입력해주세요.");
       return;
     }
@@ -431,7 +438,7 @@ export default function HomePage() {
     await submitBorrow({
       borrowerType: "guest",
       borrower: borrower.trim(),
-      phone: phone.trim(),
+      phone: normalizedPhone,
       borrowedAt,
       dueDate,
       bookCode: code,
@@ -523,7 +530,7 @@ export default function HomePage() {
           }
         },
         () => {
-          // scan failure callback - ignore noisy events
+          // ignore noisy scan failures
         }
       );
 
@@ -566,7 +573,7 @@ export default function HomePage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                회원은 회원 이름 입력 후 도서 바코드를 스캔해 대여할 수 있고,
+                회원은 이름과 전화번호 확인 후 도서 바코드를 스캔해 대여할 수 있고,
                 비회원은 이름과 연락처 입력 후 도서 바코드를 스캔할 수 있습니다.
                 카메라 스캔도 지원합니다.
               </p>
@@ -585,7 +592,7 @@ export default function HomePage() {
                   <div className="rounded-2xl border border-gray-100 p-4">
                     <p className="font-semibold text-gray-900">스캔 흐름</p>
                     <p className="mt-2">
-                      회원은 이름 입력 → 도서코드, 비회원은 정보 입력 → 도서코드
+                      회원은 이름+전화번호 → 도서코드, 비회원은 정보 입력 → 도서코드
                     </p>
                   </div>
                 </div>
@@ -606,7 +613,7 @@ export default function HomePage() {
           <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <SectionTitle
               title="대여 등록"
-              desc="회원은 이름 입력 후, 비회원은 이름과 연락처 입력 후 도서 바코드를 스캔하세요."
+              desc="회원은 이름/전화번호 확인 후, 비회원은 이름과 연락처 입력 후 도서 바코드를 스캔하세요."
             />
 
             <div className="mt-6 space-y-4">
@@ -686,7 +693,7 @@ export default function HomePage() {
               {borrowMode === "member" ? (
                 <>
                   <div className="rounded-2xl bg-sky-50 p-4 text-sm text-sky-800 ring-1 ring-sky-100">
-                    회원 이름을 입력한 뒤 도서 바코드를 스캔하세요.
+                    회원 이름과 전화번호를 입력한 뒤 도서 바코드를 스캔하세요.
                   </div>
 
                   <Input
@@ -694,6 +701,13 @@ export default function HomePage() {
                     value={borrower}
                     onChange={setBorrower}
                     placeholder="회원 이름을 입력하세요"
+                  />
+
+                  <Input
+                    label="회원 전화번호"
+                    value={phone}
+                    onChange={setPhone}
+                    placeholder="01012345678 또는 010-1234-5678"
                   />
 
                   <Input
@@ -758,7 +772,7 @@ export default function HomePage() {
                     label="비회원 연락처"
                     value={phone}
                     onChange={setPhone}
-                    placeholder="예: 010-1234-5678"
+                    placeholder="01012345678 또는 010-1234-5678"
                   />
 
                   <Input
