@@ -526,13 +526,6 @@ export default function HomePage() {
           fps: 10,
           qrbox: { width: 250, height: 140 },
           aspectRatio: 1.7778,
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.QR_CODE,
-          ],
         },
         async (decodedText: string) => {
           const code = normalizeCode(decodedText);
