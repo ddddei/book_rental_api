@@ -39,10 +39,17 @@ async function callAppsScript<T>(
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
       },
-      body: JSON.stringify(payload ?? {}),
-      cache: "no-store",
-      redirect: "follow",
-    });
+      body: JSON.stringify({
+  action: "borrow",
+  borrowerType: body.borrowerType,
+  memberCode: body.memberCode,
+  borrower: body.borrower,
+  phone: body.phone,
+  borrowedAt: body.borrowedAt,
+  dueDate: body.dueDate,
+  bookCode: body.bookCode,
+  bookTitle: body.bookTitle || "",
+}),
   }
 
   const text = await response.text();
