@@ -18,31 +18,30 @@ async function callAppsScript<T>(
     throw new Error("APPS_SCRIPT_WEB_APP_URL 환경변수가 설정되지 않았습니다.");
   }
 
-  let response: Response;
+  const response =
+    method === "GET"
+      ? await (() => {
+          const url = new URL(APPS_SCRIPT_WEB_APP_URL);
+          url.searchParams.set("action", action || "list");
 
-  if (method === "GET") {
-    const url = new URL(APPS_SCRIPT_WEB_APP_URL);
-    url.searchParams.set("action", action || "list");
+          if (payload?.bookCode) {
+            url.searchParams.set("bookCode", String(payload.bookCode));
+          }
 
-    if (payload?.bookCode) {
-      url.searchParams.set("bookCode", String(payload.bookCode));
-    }
-
-    response = await fetch(url.toString(), {
-      method: "GET",
-      cache: "no-store",
-      redirect: "follow",
-    });
-  } else {
-    response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
-      body: JSON.stringify(payload || {}),
-      redirect: "follow",
-    });
-  }
+          return fetch(url.toString(), {
+            method: "GET",
+            cache: "no-store",
+            redirect: "follow",
+          });
+        })()
+      : await fetch(APPS_SCRIPT_WEB_APP_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8",
+          },
+          body: JSON.stringify(payload ?? {}),
+          redirect: "follow",
+        });
 
   const text = await response.text();
 
@@ -51,7 +50,7 @@ async function callAppsScript<T>(
   }
 
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as AppsScriptResponse<T>;
   } catch {
     throw new Error(
       `Apps Script가 JSON이 아닌 응답을 반환했습니다: ${text.slice(0, 300)}`
