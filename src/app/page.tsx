@@ -207,6 +207,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | BookStatus>("all");
+  const [visibleCount, setVisibleCount] = useState(10);
 
   const [borrowMode, setBorrowMode] = useState<BorrowMode>("member");
   const [bookInputMode, setBookInputMode] = useState<BookInputMode>("barcode");
@@ -284,6 +285,14 @@ export default function HomePage() {
       return matchesQuery && matchesFilter;
     });
   }, [enrichedBooks, query, filter]);
+
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [query, filter]);
+
+  const visibleBooks = useMemo(() => {
+    return filteredBooks.slice(0, visibleCount);
+  }, [filteredBooks, visibleCount]);
 
   const stats = useMemo(() => {
     const total = enrichedBooks.length;
@@ -639,16 +648,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard label="전체 도서" value={stats.total} help="등록된 전체 도서 수" />
-          <StatCard label="대여 가능" value={stats.available} help="즉시 대여 가능한 도서" />
-          <StatCard label="대여 중" value={stats.borrowed} help="현재 이용 중인 도서" />
-          <StatCard label="연체" value={stats.overdue} help="반납 예정일이 지난 도서" />
-          <StatCard label="오늘 반납 예정" value={stats.dueToday} help="오늘 반납 예정 도서" />
-        </section>
-
-        <section className="mt-8 grid gap-8 lg:grid-cols-[420px_minmax(0,1fr)]">
-          <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+        <section className="mt-8 grid gap-8 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
+          <div className="self-start rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <SectionTitle
               title="대여 등록"
               desc="회원은 이름/전화번호 확인 후, 비회원은 이름과 연락처 입력 후 도서를 선택하세요."
@@ -1023,7 +1024,7 @@ export default function HomePage() {
                         </td>
                       </tr>
                     ) : (
-                      filteredBooks.map((book) => (
+                      visibleBooks.map((book) => (
                         <tr
                           key={book.id}
                           className="border-t border-gray-100 align-top"
@@ -1078,6 +1079,18 @@ export default function HomePage() {
                 </table>
               </div>
             </div>
+
+            {filteredBooks.length > visibleCount ? (
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + 10)}
+                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+                >
+                  더보기
+                </button>
+              </div>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap gap-2">
               <Badge tone="gray">도서코드 검색 가능</Badge>
