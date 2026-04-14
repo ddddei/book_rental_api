@@ -1,0 +1,3 @@
+module.exports=[97211,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(8114);a.n(d("[project]/Documents/GitHub/book_rental_api/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},91997,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(8114);a.n(d("[project]/Documents/GitHub/book_rental_api/node_modules/next/dist/client/components/builtin/global-error.js"))},58054,a=>{"use strict";a.i(97211);var b=a.i(91997);a.n(b)}];
+
+//# sourceMappingURL=f447a_next_dist_client_components_builtin_global-error_dc9e8a8d.js.map

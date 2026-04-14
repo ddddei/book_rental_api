@@ -1,0 +1,11 @@
+var R=require("../../chunks/ssr/[turbopack]_runtime.js")("server/app/_global-error/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__f065fd6b._.js")
+R.c("server/chunks/ssr/Documents_GitHub_book_rental_api_9ad2d8f3._.js")
+R.c("server/chunks/ssr/f447a_next_dist_657d9aab._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__6d0d8c1d._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__43f0ff86._.js")
+R.c("server/chunks/ssr/f447a_next_dist_94fc7924._.js")
+R.c("server/chunks/ssr/Documents_GitHub_book_rental_api_src_app_c222af14._.js")
+R.c("server/chunks/ssr/7889e_book_rental_api__next-internal_server_app__global-error_page_actions_55bb9e41.js")
+R.m(61837)
+module.exports=R.m(61837).exports
