@@ -36,7 +36,7 @@ function Badge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${styles[tone]}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${styles[tone]}`}
     >
       {children}
     </span>
@@ -648,6 +648,34 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <StatCard
+            label="전체 도서"
+            value={stats.total}
+            help="등록된 전체 도서 수"
+          />
+          <StatCard
+            label="대여 가능"
+            value={stats.available}
+            help="즉시 대여 가능한 도서"
+          />
+          <StatCard
+            label="대여 중"
+            value={stats.borrowed}
+            help="현재 이용 중인 도서"
+          />
+          <StatCard
+            label="연체"
+            value={stats.overdue}
+            help="반납 예정일이 지난 도서"
+          />
+          <StatCard
+            label="오늘 반납 예정"
+            value={stats.dueToday}
+            help="오늘 반납 예정 도서"
+          />
+        </section>
+
         <section className="mt-8 grid gap-8 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
           <div className="self-start rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <SectionTitle
@@ -1056,7 +1084,7 @@ export default function HomePage() {
                           </td>
                           <td className="px-4 py-4">
                             {book.status === "available" ? (
-                              <span className="text-sm text-gray-400">
+                              <span className="whitespace-nowrap text-sm text-gray-400">
                                 대여 가능
                               </span>
                             ) : (
