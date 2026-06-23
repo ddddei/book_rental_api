@@ -13,9 +13,9 @@ type Book = {
   borrower: string;
   borrowedAt: string;
   dueDate: string;
-  bookcode: string;
+  bookCode: string;
   borrowerType?: string;
-  membercode?: string;
+  memberCode?: string;
   phone?: string;
 };
 
@@ -346,7 +346,7 @@ export default function HomePage() {
         book.title.toLowerCase().includes(lowerQuery) ||
         book.author.toLowerCase().includes(lowerQuery) ||
         book.borrower.toLowerCase().includes(lowerQuery) ||
-        (book.bookcode || "").toLowerCase().includes(lowerQuery);
+        (book.bookCode || "").toLowerCase().includes(lowerQuery);
 
       const matchesFilter = filter === "all" ? true : book.status === filter;
 
@@ -380,6 +380,13 @@ export default function HomePage() {
     ).length;
 
     return { total, available, borrowed, overdue, dueToday };
+  }, [enrichedBooks]);
+
+  const recentBorrowed = useMemo(() => {
+    return enrichedBooks
+      .filter((book) => book.status === "borrowed" || book.status === "overdue")
+      .sort((a, b) => (a.borrowedAt < b.borrowedAt ? 1 : -1))
+      .slice(0, 5);
   }, [enrichedBooks]);
 
   const availableTitleOptions = useMemo(() => {
@@ -1206,6 +1213,50 @@ export default function HomePage() {
                 </p>
               ) : null}
             </div>
+
+            <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+              <SectionTitle
+                title="최근 대여 / 빠른 반납"
+                desc="가장 최근 대여된 도서를 바로 반납 처리할 수 있습니다."
+              />
+
+              <div className="mt-4 space-y-2">
+                {recentBorrowed.length === 0 ? (
+                  <p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-gray-500 ring-1 ring-gray-100">
+                    현재 대여 중인 도서가 없습니다.
+                  </p>
+                ) : (
+                  recentBorrowed.map((book) => (
+                    <div
+                      key={book.id}
+                      className="flex items-center justify-between gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-100"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">
+                          {book.title}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-gray-500">
+                          {book.borrower || "-"} · 대여일 {formatDate(book.borrowedAt)} · 반납예정 {formatDate(book.dueDate)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge tone={getStatusTone(book.status)}>
+                          {getStatusLabel(book.status)}
+                        </Badge>
+                        <button
+                          type="button"
+                          disabled={submitting}
+                          onClick={() => handleReturn(book.bookCode, book.id)}
+                          className="inline-flex items-center justify-center rounded-xl bg-gray-950 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          반납 처리
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="min-w-0 overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
@@ -1338,7 +1389,7 @@ export default function HomePage() {
                             </td>
                             <td className="px-4 py-5">
                               <span className="inline-flex whitespace-nowrap rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
-                                {book.bookcode || "-"}
+                                {book.bookCode || "-"}
                               </span>
                             </td>
                             <td className="px-4 py-5 text-sm font-medium text-gray-700">
@@ -1368,7 +1419,7 @@ export default function HomePage() {
                                   type="button"
                                   disabled={submitting}
                                   onClick={() =>
-                                    handleReturn(book.bookcode, book.id)
+                                    handleReturn(book.bookCode, book.id)
                                   }
                                   className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
@@ -1419,7 +1470,7 @@ export default function HomePage() {
                             Code
                           </p>
                           <p className="mt-1 break-all font-bold text-gray-800">
-                            {book.bookcode || "-"}
+                            {book.bookCode || "-"}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-gray-50 p-3">
@@ -1457,7 +1508,7 @@ export default function HomePage() {
                           <button
                             type="button"
                             disabled={submitting}
-                            onClick={() => handleReturn(book.bookcode, book.id)}
+                            onClick={() => handleReturn(book.bookCode, book.id)}
                             className="inline-flex w-full items-center justify-center rounded-2xl bg-gray-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             반납 처리
