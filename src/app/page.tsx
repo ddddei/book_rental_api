@@ -22,6 +22,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | BookStatus>("all");
+  const [pageSize, setPageSize] = useState(10);
   const [visibleCount, setVisibleCount] = useState(10);
 
   const [borrowMode, setBorrowMode] = useState<BorrowMode>("member");
@@ -102,8 +103,8 @@ export default function HomePage() {
   }, [enrichedBooks, query, filter]);
 
   useEffect(() => {
-    setVisibleCount(10);
-  }, [query, filter]);
+    setVisibleCount(pageSize);
+  }, [query, filter, pageSize]);
 
   const visibleBooks = useMemo(() => {
     return filteredBooks.slice(0, visibleCount);
@@ -480,6 +481,14 @@ export default function HomePage() {
             visibleBooks={visibleBooks}
             visibleCount={visibleCount}
             setVisibleCount={setVisibleCount}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
+            statusCounts={{
+              all: stats.total,
+              available: stats.available,
+              borrowed: stats.borrowed,
+              overdue: stats.overdue,
+            }}
             submitting={submitting}
             handleReturn={handleReturn}
           />
