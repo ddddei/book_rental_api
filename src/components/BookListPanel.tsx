@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Book,
   BookStatus,
@@ -5,9 +6,51 @@ import {
   getStatusLabel,
   getStatusTone,
 } from "@/lib/book";
-import { Badge, Input, Select, SectionTitle } from "./ui";
+import { Badge, SectionTitle } from "./ui";
 
 type EnrichedBook = Book & { status: BookStatus };
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
+function DebouncedSearchInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (draft !== value) {
+        onChange(draft);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-gray-700">
+        검색
+      </span>
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="도서명, 저자, 대여자, 도서코드 검색"
+        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+      />
+    </label>
+  );
+}
 
 export function BookListPanel({
   query,
@@ -20,6 +63,9 @@ export function BookListPanel({
   visibleBooks,
   visibleCount,
   setVisibleCount,
+  pageSize,
+  setPageSize,
+  statusCounts,
   submitting,
   handleReturn,
 }: {
@@ -33,9 +79,24 @@ export function BookListPanel({
   visibleBooks: EnrichedBook[];
   visibleCount: number;
   setVisibleCount: (updater: (prev: number) => number) => void;
+  pageSize: number;
+  setPageSize: (size: number) => void;
+  statusCounts: {
+    all: number;
+    available: number;
+    borrowed: number;
+    overdue: number;
+  };
   submitting: boolean;
   handleReturn: (bookCode: string, bookId?: number) => void;
 }) {
+  const filterTabs: Array<{ label: string; value: "all" | BookStatus; count: number }> = [
+    { label: "전체", value: "all", count: statusCounts.all },
+    { label: "대여 가능", value: "available", count: statusCounts.available },
+    { label: "대여 중", value: "borrowed", count: statusCounts.borrowed },
+    { label: "연체", value: "overdue", count: statusCounts.overdue },
+  ];
+
   return (
     <div className="min-w-0 overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
       <div className="border-b border-gray-100 bg-gradient-to-br from-[#F5F8F5] via-white to-cyan-50 p-6">
@@ -54,24 +115,8 @@ export function BookListPanel({
         </div>
 
         <div className="mt-6 rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-sm backdrop-blur">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
-            <Input
-              label="검색"
-              value={query}
-              onChange={setQuery}
-              placeholder="도서명, 저자, 대여자, 도서코드 검색"
-            />
-            <Select
-              label="상태 필터"
-              value={filter}
-              onChange={(value) => setFilter(value as "all" | BookStatus)}
-              options={[
-                { label: "전체", value: "all" },
-                { label: "대여 가능", value: "available" },
-                { label: "대여 중", value: "borrowed" },
-                { label: "연체", value: "overdue" },
-              ]}
-            />
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <DebouncedSearchInput value={query} onChange={setQuery} />
             <button
               type="button"
               onClick={fetchBooks}
@@ -79,6 +124,32 @@ export function BookListPanel({
             >
               새로고침
             </button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setFilter(tab.value)}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  filter === tab.value
+                    ? "bg-gray-950 text-white shadow-sm"
+                    : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    filter === tab.value
+                      ? "bg-white/20 text-white"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="mt-4 flex flex-col gap-2 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
@@ -298,18 +369,52 @@ export function BookListPanel({
           )}
         </div>
 
-        {filteredBooks.length > visibleCount ? (
-          <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-[#F5F8F5] p-4 text-center">
-            <p className="text-sm font-medium text-gray-600">
-              아직 표시하지 않은 도서가 있습니다.
-            </p>
-            <button
-              type="button"
-              onClick={() => setVisibleCount((prev) => prev + 10)}
-              className="mt-3 inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
-            >
-              더보기
-            </button>
+        {filteredBooks.length > 0 ? (
+          <div className="mt-5 flex flex-col gap-4 rounded-[1.5rem] border border-gray-100 bg-[#F5F8F5] p-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+            <div className="flex items-center justify-center gap-2 sm:justify-start">
+              <span className="text-sm font-medium text-gray-600">
+                한 번에 표시할 개수
+              </span>
+              <div className="flex gap-1">
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setPageSize(size)}
+                    className={`inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                      pageSize === size
+                        ? "bg-gray-950 text-white"
+                        : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredBooks.length > visibleCount ? (
+              <div className="flex justify-center gap-2 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + pageSize)}
+                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+                >
+                  더보기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount(() => filteredBooks.length)}
+                  className="inline-flex items-center justify-center rounded-2xl bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-900"
+                >
+                  전체보기
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-gray-500 sm:text-right">
+                모든 도서를 표시했습니다.
+              </p>
+            )}
           </div>
         ) : null}
       </div>
