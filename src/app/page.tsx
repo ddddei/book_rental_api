@@ -16,6 +16,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { StatsSection } from "@/components/StatsSection";
 import { BorrowPanel } from "@/components/BorrowPanel";
 import { BookListPanel } from "@/components/BookListPanel";
+import type { Html5Qrcode } from "html5-qrcode";
 
 export default function HomePage() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -44,7 +45,7 @@ export default function HomePage() {
   const [cameraError, setCameraError] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
 
-  const html5QrCodeRef = useRef<any>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerRegionId = "reader";
 
   async function fetchBooks() {
