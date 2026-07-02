@@ -65,7 +65,7 @@ export default function SpacesPage() {
               href="/rental"
               className="rounded-2xl bg-gradient-to-r from-pink-500 to-orange-400 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95"
             >
-              공간 예약하기 →
+              공간대관 안내 보기 →
             </Link>
             <Link
               href="/mypage?role=participant"
