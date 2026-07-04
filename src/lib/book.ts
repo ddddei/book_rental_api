@@ -43,6 +43,15 @@ export function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
 }
 
+export function getOverdueDays(dueDate: string) {
+  if (!dueDate) return 0;
+  const today = new Date(getTodayString());
+  const due = new Date(dueDate);
+  if (Number.isNaN(due.getTime())) return 0;
+  const diff = Math.round((today.getTime() - due.getTime()) / 86400000);
+  return Math.max(0, diff);
+}
+
 export function getBookStatus(book: Book): BookStatus {
   if (!book.borrower || !book.dueDate) return "available";
 
