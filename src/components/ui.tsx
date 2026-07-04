@@ -6,16 +6,16 @@ export function Badge({
   tone?: "emerald" | "gray" | "rose" | "sky" | "amber";
 }) {
   const styles = {
-    emerald: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-    gray: "bg-gray-100 text-gray-700 ring-1 ring-gray-200",
-    rose: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
-    sky: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
-    amber: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+    emerald: "bg-brand-soft text-brand-deep",
+    gray: "bg-line-soft text-ink-soft",
+    rose: "bg-overdue-soft text-overdue-deep",
+    sky: "bg-borrowed-soft text-borrowed-deep",
+    amber: "bg-today-soft text-today-deep",
   };
 
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${styles[tone]}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${styles[tone]}`}
     >
       {children}
     </span>
@@ -25,85 +25,48 @@ export function Badge({
 export function StatCard({
   label,
   value,
-  help,
-  point,
   tone,
 }: {
   label: string;
   value: string | number;
-  help: string;
-  point: string;
-  tone: "sage" | "emerald" | "cyan" | "rose" | "amber";
+  tone: "neutral" | "brand" | "borrowed" | "overdue" | "today";
 }) {
   const tones = {
-    sage: {
-      card: "border-[#0EA371]/10 bg-[#F5F8F5]",
-      dot: "bg-gray-500",
-      pill: "bg-white/80 text-gray-600 ring-gray-200",
-      value: "text-gray-950",
-      glow: "bg-gray-300/30",
+    neutral: {
+      card: "bg-surface border border-line",
+      label: "text-ink-faint",
+      value: "text-ink",
     },
-    emerald: {
-      card: "border-[#0EA371]/20 bg-[#F5F8F5]",
-      dot: "bg-[#0EA371]",
-      pill: "bg-[#0EA371]/10 text-[#0EA371] ring-[#0EA371]/15",
-      value: "text-[#0EA371]",
-      glow: "bg-[#0EA371]/15",
+    brand: {
+      card: "bg-brand-soft",
+      label: "text-brand-mid",
+      value: "text-brand-deep",
     },
-    cyan: {
-      card: "border-[#00B5C9]/20 bg-cyan-50/60",
-      dot: "bg-[#00B5C9]",
-      pill: "bg-[#00B5C9]/10 text-cyan-700 ring-[#00B5C9]/15",
-      value: "text-cyan-700",
-      glow: "bg-[#00B5C9]/15",
+    borrowed: {
+      card: "bg-borrowed-soft",
+      label: "text-borrowed-mid",
+      value: "text-borrowed-deep",
     },
-    rose: {
-      card: "border-rose-200 bg-rose-50/60",
-      dot: "bg-rose-500",
-      pill: "bg-rose-100 text-rose-700 ring-rose-200",
-      value: "text-rose-700",
-      glow: "bg-rose-300/20",
+    overdue: {
+      card: "bg-overdue-soft",
+      label: "text-overdue-mid",
+      value: "text-overdue-deep",
     },
-    amber: {
-      card: "border-amber-200 bg-amber-50/70",
-      dot: "bg-amber-400",
-      pill: "bg-amber-100 text-amber-700 ring-amber-200",
-      value: "text-amber-700",
-      glow: "bg-amber-300/25",
+    today: {
+      card: "bg-today-soft",
+      label: "text-today-mid",
+      value: "text-today-deep",
     },
   };
 
   const style = tones[tone];
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-[1.5rem] border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5 ${style.card}`}
-    >
-      <div
-        className={`pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full blur-2xl ${style.glow}`}
-      />
-      <div className="relative flex min-h-full flex-col justify-between gap-5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
-            {label}
-          </p>
-          <span
-            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${style.pill}`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-            {point}
-          </span>
-        </div>
-
-        <div>
-          <p className={`text-4xl font-black leading-none tracking-tight ${style.value}`}>
-            {value}
-          </p>
-          <p className="mt-3 text-xs font-medium leading-5 text-gray-600 sm:text-sm">
-            {help}
-          </p>
-        </div>
-      </div>
+    <div className={`rounded-tile px-4 py-3 ${style.card}`}>
+      <p className={`text-xs ${style.label}`}>{label}</p>
+      <p className={`mt-1 text-xl font-medium leading-none sm:text-2xl ${style.value}`}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -113,12 +76,12 @@ export function SectionTitle({
   desc,
 }: {
   title: string;
-  desc: string;
+  desc?: string;
 }) {
   return (
     <div>
-      <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-      <p className="mt-1 text-sm text-gray-600">{desc}</p>
+      <h2 className="text-base font-medium text-ink">{title}</h2>
+      {desc ? <p className="mt-1 text-sm text-ink-soft">{desc}</p> : null}
     </div>
   );
 }
@@ -140,7 +103,7 @@ export function Input({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-gray-700">
+      <span className="mb-1.5 block text-sm font-medium text-ink-soft">
         {label}
       </span>
       <input
@@ -149,7 +112,7 @@ export function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+        className="w-full rounded-field border border-line bg-surface-soft px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-soft"
       />
     </label>
   );
@@ -168,13 +131,13 @@ export function Select({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-gray-700">
+      <span className="mb-1.5 block text-sm font-medium text-ink-soft">
         {label}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+        className="w-full rounded-field border border-line bg-surface-soft px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-soft"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

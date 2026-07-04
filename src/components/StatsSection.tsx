@@ -10,42 +10,17 @@ export type Stats = {
 
 export function StatsSection({ stats }: { stats: Stats }) {
   return (
-    <section className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
-      <StatCard
-        label="전체 도서"
-        value={stats.total}
-        help="등록된 전체 도서 수"
-        point="전체"
-        tone="sage"
-      />
-      <StatCard
-        label="대여 가능"
-        value={stats.available}
-        help="즉시 대여 가능한 도서"
-        point="가능"
-        tone="emerald"
-      />
-      <StatCard
-        label="대여 중"
-        value={stats.borrowed}
-        help="현재 이용 중인 도서"
-        point="진행"
-        tone="cyan"
-      />
-      <StatCard
-        label="연체"
-        value={stats.overdue}
-        help="반납 예정일이 지난 도서"
-        point="주의"
-        tone="rose"
-      />
-      <StatCard
-        label="오늘 반납 예정"
-        value={stats.dueToday}
-        help="오늘 반납 예정 도서"
-        point="오늘"
-        tone="amber"
-      />
+    <section className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-5">
+      <StatCard label="대여 가능" value={stats.available} tone="brand" />
+      <StatCard label="대여 중" value={stats.borrowed} tone="borrowed" />
+      <StatCard label="연체" value={stats.overdue} tone="overdue" />
+      <StatCard label="오늘 반납" value={stats.dueToday} tone="today" />
+      <div className="col-span-2 flex items-center justify-between rounded-tile border border-line bg-surface px-4 py-3 xl:order-first xl:col-span-1 xl:block">
+        <p className="text-xs text-ink-faint">전체 도서</p>
+        <p className="text-xl font-medium leading-none text-ink sm:text-2xl xl:mt-1">
+          {stats.total}
+        </p>
+      </div>
     </section>
   );
 }

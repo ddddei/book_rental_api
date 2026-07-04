@@ -1,26 +1,60 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  디자인 토큰 v2 — docs/DESIGN_REFERENCE_GUIDE.md 방향 선정 결과(B+C 절충) 기준.
+  컴포넌트에서는 아래 토큰 유틸리티(bg-canvas, text-ink, bg-brand 등)만 사용한다.
+*/
+@theme {
+  /* 표면 */
+  --color-canvas: #f5f8f5;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f7faf8;
+  --color-surface-hover: #f9fbfa;
+  --color-line: #e2eae4;
+  --color-line-soft: #eef4f0;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* 텍스트 */
+  --color-ink: #10231b;
+  --color-ink-soft: #5c7268;
+  --color-ink-faint: #9aaca1;
+  --color-ink-header: #0f3d2e;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* 브랜드 (그린) */
+  --color-brand: #0ea371;
+  --color-brand-strong: #0b6b4d;
+  --color-brand-hover: #0c8a60;
+  --color-brand-soft: #e1f5ee;
+  --color-brand-deep: #085041;
+  --color-brand-mid: #0f6e56;
+
+  /* 상태: 대여 중 (블루) */
+  --color-borrowed-soft: #e6f1fb;
+  --color-borrowed-mid: #185fa5;
+  --color-borrowed-deep: #0c447c;
+
+  /* 상태: 연체 (레드) */
+  --color-overdue-soft: #fcebeb;
+  --color-overdue-tint: #fdf6f6;
+  --color-overdue-line: #f0c9c9;
+  --color-overdue-mid: #a32d2d;
+  --color-overdue-deep: #791f1f;
+
+  /* 상태: 오늘 반납 (앰버) */
+  --color-today-soft: #faeeda;
+  --color-today-mid: #854f0b;
+  --color-today-deep: #633806;
+
+  /* 라운딩 */
+  --radius-card: 18px;
+  --radius-field: 10px;
+  --radius-tile: 14px;
+  --radius-row: 12px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
 }

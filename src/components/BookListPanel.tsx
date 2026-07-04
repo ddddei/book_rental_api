@@ -3,10 +3,12 @@ import {
   Book,
   BookStatus,
   formatDate,
+  getOverdueDays,
   getStatusLabel,
   getStatusTone,
+  getTodayString,
 } from "@/lib/book";
-import { Badge, SectionTitle } from "./ui";
+import { Badge } from "./ui";
 
 type EnrichedBook = Book & { status: BookStatus };
 
@@ -37,18 +39,38 @@ function DebouncedSearchInput({
   }, [draft]);
 
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-gray-700">
-        검색
-      </span>
-      <input
-        type="text"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        placeholder="도서명, 저자, 대여자, 도서코드 검색"
-        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-      />
-    </label>
+    <input
+      type="text"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      placeholder="도서명, 저자, 대여자, 코드 검색"
+      className="w-full rounded-full border border-line bg-surface-soft px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-soft"
+    />
+  );
+}
+
+function DueInfo({ book }: { book: EnrichedBook }) {
+  if (book.status === "available") {
+    return <span className="text-ink-faint">—</span>;
+  }
+
+  const overdueDays = getOverdueDays(book.dueDate);
+  const isToday = book.dueDate === getTodayString();
+
+  return (
+    <span
+      className={
+        book.status === "overdue" ? "text-overdue-mid" : "text-ink-soft"
+      }
+    >
+      {book.borrower || "-"} · {formatDate(book.dueDate)}
+      {book.status === "overdue" && overdueDays > 0 ? (
+        <b className="ml-1 font-medium">+{overdueDays}일</b>
+      ) : null}
+      {isToday && book.status === "borrowed" ? (
+        <b className="ml-1 font-medium text-today-mid">오늘</b>
+      ) : null}
+    </span>
   );
 }
 
@@ -90,267 +112,106 @@ export function BookListPanel({
   submitting: boolean;
   handleReturn: (bookCode: string, bookId?: number) => void;
 }) {
-  const filterTabs: Array<{ label: string; value: "all" | BookStatus; count: number }> = [
+  const filterTabs: Array<{
+    label: string;
+    value: "all" | BookStatus;
+    count: number;
+  }> = [
     { label: "전체", value: "all", count: statusCounts.all },
-    { label: "대여 가능", value: "available", count: statusCounts.available },
+    { label: "가능", value: "available", count: statusCounts.available },
     { label: "대여 중", value: "borrowed", count: statusCounts.borrowed },
     { label: "연체", value: "overdue", count: statusCounts.overdue },
   ];
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
-      <div className="border-b border-gray-100 bg-gradient-to-br from-[#F5F8F5] via-white to-cyan-50 p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <SectionTitle
-            title="도서 목록"
-            desc="검색과 필터를 이용해 현재 대여 현황을 빠르게 확인하세요."
-          />
-
-          <div className="flex flex-wrap gap-2">
-            <Badge tone="gray">도서코드 검색 가능</Badge>
-            <Badge tone="emerald">대여 가능 도서 확인</Badge>
-            <Badge tone="sky">대여 중 목록 확인</Badge>
-            <Badge tone="rose">연체 도서 즉시 확인</Badge>
+    <div className="min-w-0 rounded-card border border-line bg-surface p-4 sm:p-5">
+      <div className="flex flex-col gap-2.5">
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1">
+            <DebouncedSearchInput value={query} onChange={setQuery} />
           </div>
+          <button
+            type="button"
+            onClick={fetchBooks}
+            className="shrink-0 rounded-full border border-line bg-surface px-4 py-2.5 text-sm text-ink-soft transition hover:bg-surface-hover"
+          >
+            새로고침
+          </button>
         </div>
 
-        <div className="mt-6 rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-sm backdrop-blur">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <DebouncedSearchInput value={query} onChange={setQuery} />
-            <button
-              type="button"
-              onClick={fetchBooks}
-              className="inline-flex items-center justify-center rounded-2xl bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-900"
-            >
-              새로고침
-            </button>
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {filterTabs.map((tab) => {
+            const active = filter === tab.value;
+            const isOverdue = tab.value === "overdue";
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {filterTabs.map((tab) => (
+            return (
               <button
                 key={tab.value}
                 type="button"
                 onClick={() => setFilter(tab.value)}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  filter === tab.value
-                    ? "bg-gray-950 text-white shadow-sm"
-                    : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+                className={`rounded-full px-3 py-1.5 text-xs transition ${
+                  active
+                    ? "bg-ink font-medium text-white"
+                    : isOverdue
+                      ? "border border-overdue-line text-overdue-mid hover:bg-overdue-tint"
+                      : "border border-line text-ink-soft hover:bg-surface-hover"
                 }`}
               >
-                {tab.label}
-                <span
-                  className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold ${
-                    filter === tab.value
-                      ? "bg-white/20 text-white"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {tab.count}
-                </span>
+                {tab.label} {tab.count}
               </button>
-            ))}
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
-            <p>
-              현재 조건에서{" "}
-              <span className="font-bold text-gray-950">
-                {filteredBooks.length}
-              </span>
-              권 중{" "}
-              <span className="font-bold text-[#0EA371]">
-                {visibleBooks.length}
-              </span>
-              권 표시
-            </p>
-            <p className="inline-flex w-fit items-center rounded-full bg-gray-950 px-3 py-1 text-xs font-bold text-white">
-              {filter === "all" ? "전체 상태" : getStatusLabel(filter)}
-            </p>
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
-        <div className="hidden overflow-hidden rounded-[1.5rem] border border-gray-100 md:block">
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse">
-              <thead className="bg-gray-950 text-white">
-                <tr>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    도서명
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    도서코드
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    저자
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    상태
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    대여자
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    대여일
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    반납예정일
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-[0.16em] text-gray-200">
-                    처리
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-12 text-center text-sm text-gray-500"
-                    >
-                      데이터를 불러오는 중입니다...
-                    </td>
-                  </tr>
-                ) : filteredBooks.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-12 text-center text-sm text-gray-500"
-                    >
-                      조건에 맞는 도서가 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  visibleBooks.map((book) => (
-                    <tr
-                      key={book.id}
-                      className="align-top transition hover:bg-[#F5F8F5]"
-                    >
-                      <td className="w-56 px-4 py-5">
-                        <p className="text-base font-bold leading-6 text-gray-950">
-                          {book.title}
-                        </p>
-                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-gray-400">
-                          Title
-                        </p>
-                      </td>
-                      <td className="px-4 py-5">
-                        <span className="inline-flex whitespace-nowrap rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
-                          {book.bookCode || "-"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-5 text-sm font-medium text-gray-700">
-                        {book.author || "-"}
-                      </td>
-                      <td className="px-4 py-5">
-                        <Badge tone={getStatusTone(book.status)}>
-                          {getStatusLabel(book.status)}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-5 text-sm font-medium text-gray-700">
-                        {book.borrower || "-"}
-                      </td>
-                      <td className="px-4 py-5 text-sm text-gray-600">
-                        {formatDate(book.borrowedAt)}
-                      </td>
-                      <td className="px-4 py-5 text-sm text-gray-600">
-                        {formatDate(book.dueDate)}
-                      </td>
-                      <td className="px-4 py-5">
-                        {book.status === "available" ? (
-                          <span className="inline-flex whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
-                            대여 가능
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={submitting}
-                            onClick={() =>
-                              handleReturn(book.bookCode, book.id)
-                            }
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            반납 처리
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      <div className="mt-4 hidden md:block">
+        <div className="grid grid-cols-[minmax(0,1.6fr)_88px_72px_minmax(0,1fr)_72px] gap-2 px-3 pb-2 text-xs text-ink-faint">
+          <span>도서명</span>
+          <span>코드</span>
+          <span>상태</span>
+          <span>대여자 · 반납예정</span>
+          <span className="text-right">처리</span>
         </div>
 
-        <div className="space-y-3 md:hidden">
-          {loading ? (
-            <div className="rounded-[1.5rem] border border-gray-100 bg-white px-4 py-10 text-center text-sm text-gray-500 shadow-sm">
-              데이터를 불러오는 중입니다...
-            </div>
-          ) : filteredBooks.length === 0 ? (
-            <div className="rounded-[1.5rem] border border-gray-100 bg-white px-4 py-10 text-center text-sm text-gray-500 shadow-sm">
-              조건에 맞는 도서가 없습니다.
-            </div>
-          ) : (
-            visibleBooks.map((book) => (
+        {loading ? (
+          <p className="rounded-row bg-surface-soft px-4 py-10 text-center text-sm text-ink-faint">
+            데이터를 불러오는 중입니다...
+          </p>
+        ) : filteredBooks.length === 0 ? (
+          <p className="rounded-row bg-surface-soft px-4 py-10 text-center text-sm text-ink-faint">
+            조건에 맞는 도서가 없습니다.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {visibleBooks.map((book) => (
               <div
                 key={book.id}
-                className="rounded-[1.5rem] border border-gray-100 bg-white p-4 shadow-sm"
+                className={`grid grid-cols-[minmax(0,1.6fr)_88px_72px_minmax(0,1fr)_72px] items-center gap-2 rounded-row px-3 py-2.5 text-sm ${
+                  book.status === "overdue"
+                    ? "bg-overdue-tint"
+                    : "bg-surface-hover"
+                }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-base font-bold leading-6 text-gray-950">
-                      {book.title}
+                <div className="min-w-0">
+                  <p className="truncate text-ink">{book.title}</p>
+                  {book.author ? (
+                    <p className="truncate text-xs text-ink-faint">
+                      {book.author}
                     </p>
-                    <p className="mt-2 text-sm font-medium text-gray-600">
-                      {book.author || "-"}
-                    </p>
-                  </div>
-                  <Badge tone={getStatusTone(book.status)}>
-                    {getStatusLabel(book.status)}
-                  </Badge>
+                  ) : null}
                 </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-2xl bg-gray-50 p-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-                      Code
-                    </p>
-                    <p className="mt-1 break-all font-bold text-gray-800">
-                      {book.bookCode || "-"}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-gray-50 p-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-                      Borrower
-                    </p>
-                    <p className="mt-1 font-bold text-gray-800">
-                      {book.borrower || "-"}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-gray-50 p-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-                      대여일
-                    </p>
-                    <p className="mt-1 font-bold text-gray-800">
-                      {formatDate(book.borrowedAt)}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-gray-50 p-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-                      반납예정일
-                    </p>
-                    <p className="mt-1 font-bold text-gray-800">
-                      {formatDate(book.dueDate)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4">
+                <span className="font-mono text-xs text-ink-faint">
+                  {book.bookCode || "-"}
+                </span>
+                <Badge tone={getStatusTone(book.status)}>
+                  {getStatusLabel(book.status)}
+                </Badge>
+                <span className="truncate text-xs">
+                  <DueInfo book={book} />
+                </span>
+                <div className="text-right">
                   {book.status === "available" ? (
-                    <span className="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-100">
+                    <span className="text-sm font-medium text-brand">
                       대여 가능
                     </span>
                   ) : (
@@ -358,66 +219,136 @@ export function BookListPanel({
                       type="button"
                       disabled={submitting}
                       onClick={() => handleReturn(book.bookCode, book.id)}
-                      className="inline-flex w-full items-center justify-center rounded-2xl bg-gray-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                        book.status === "overdue"
+                          ? "border-overdue-line text-overdue-mid hover:bg-overdue-soft"
+                          : "border-line text-ink-soft hover:bg-line-soft"
+                      }`}
                     >
-                      반납 처리
+                      반납
                     </button>
                   )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        {filteredBooks.length > 0 ? (
-          <div className="mt-5 flex flex-col gap-4 rounded-[1.5rem] border border-gray-100 bg-[#F5F8F5] p-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
-            <div className="flex items-center justify-center gap-2 sm:justify-start">
-              <span className="text-sm font-medium text-gray-600">
-                한 번에 표시할 개수
-              </span>
-              <div className="flex gap-1">
-                {PAGE_SIZE_OPTIONS.map((size) => (
+      <div className="mt-4 space-y-2 md:hidden">
+        {loading ? (
+          <p className="rounded-row bg-surface-soft px-4 py-10 text-center text-sm text-ink-faint">
+            데이터를 불러오는 중입니다...
+          </p>
+        ) : filteredBooks.length === 0 ? (
+          <p className="rounded-row bg-surface-soft px-4 py-10 text-center text-sm text-ink-faint">
+            조건에 맞는 도서가 없습니다.
+          </p>
+        ) : (
+          visibleBooks.map((book) => (
+            <div
+              key={book.id}
+              className={`rounded-row p-3 ${
+                book.status === "overdue"
+                  ? "bg-overdue-tint"
+                  : "bg-surface-hover"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-sm font-medium text-ink">
+                  {book.title}
+                </p>
+                <Badge tone={getStatusTone(book.status)}>
+                  {book.status === "overdue" &&
+                  getOverdueDays(book.dueDate) > 0
+                    ? `연체 +${getOverdueDays(book.dueDate)}일`
+                    : getStatusLabel(book.status)}
+                </Badge>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-xs">
+                  {book.status === "available" ? (
+                    <span className="text-ink-faint">
+                      {book.author || "-"}{" "}
+                      <span className="font-mono">{book.bookCode || ""}</span>
+                    </span>
+                  ) : (
+                    <>
+                      <DueInfo book={book} />{" "}
+                      <span className="font-mono text-ink-faint">
+                        {book.bookCode || ""}
+                      </span>
+                    </>
+                  )}
+                </span>
+                {book.status === "available" ? (
+                  <span className="shrink-0 rounded-full bg-brand px-3.5 py-1.5 text-xs font-medium text-white">
+                    대여 가능
+                  </span>
+                ) : (
                   <button
-                    key={size}
                     type="button"
-                    onClick={() => setPageSize(size)}
-                    className={`inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                      pageSize === size
-                        ? "bg-gray-950 text-white"
-                        : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+                    disabled={submitting}
+                    onClick={() => handleReturn(book.bookCode, book.id)}
+                    className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      book.status === "overdue"
+                        ? "border-overdue-line text-overdue-mid"
+                        : "border-line text-ink-soft"
                     }`}
                   >
-                    {size}
+                    반납
                   </button>
-                ))}
+                )}
               </div>
             </div>
-
-            {filteredBooks.length > visibleCount ? (
-              <div className="flex justify-center gap-2 sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setVisibleCount((prev) => prev + pageSize)}
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
-                >
-                  더보기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVisibleCount(() => filteredBooks.length)}
-                  className="inline-flex items-center justify-center rounded-2xl bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-900"
-                >
-                  전체보기
-                </button>
-              </div>
-            ) : (
-              <p className="text-sm font-medium text-gray-500 sm:text-right">
-                모든 도서를 표시했습니다.
-              </p>
-            )}
-          </div>
-        ) : null}
+          ))
+        )}
       </div>
+
+      {filteredBooks.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-ink-faint">
+            {visibleBooks.length} / {filteredBooks.length} 표시 중
+            <span className="ml-3 inline-flex gap-1">
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setPageSize(size)}
+                  className={`rounded-full px-2 py-0.5 text-xs transition ${
+                    pageSize === size
+                      ? "bg-line-soft font-medium text-ink"
+                      : "text-ink-faint hover:text-ink-soft"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </span>
+          </p>
+
+          {filteredBooks.length > visibleCount ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + pageSize)}
+                className="flex-1 rounded-full border border-line px-5 py-2 text-sm text-ink-soft transition hover:bg-surface-hover sm:flex-none"
+              >
+                더보기
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibleCount(() => filteredBooks.length)}
+                className="rounded-full border border-line px-4 py-2 text-sm text-ink-faint transition hover:bg-surface-hover"
+              >
+                전체보기
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-ink-faint">모든 도서를 표시했습니다.</p>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

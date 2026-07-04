@@ -12,6 +12,7 @@ import {
   normalizeCode,
   normalizePhone,
 } from "@/lib/book";
+import { AppHeader } from "@/components/AppHeader";
 import { HeroSection } from "@/components/HeroSection";
 import { StatsSection } from "@/components/StatsSection";
 import { BorrowPanel } from "@/components/BorrowPanel";
@@ -427,13 +428,14 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-sky-50">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-canvas">
+      <AppHeader />
+      <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
         <HeroSection />
 
         <StatsSection stats={stats} />
 
-        <section className="mt-8 grid gap-8 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
+        <section className="mt-4 grid gap-4 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start">
           <BorrowPanel
             borrowMode={borrowMode}
             setBorrowMode={setBorrowMode}
