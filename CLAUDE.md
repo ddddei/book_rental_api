@@ -29,10 +29,10 @@ docs/                     # 기획/디자인 문서 (BOOK_RENTAL_DESIGN_PACKAGE_
 
 ## 현재 PR/브랜치 흐름
 
-- `main`이 베이스. feature 브랜치 → PR → squash/merge 패턴
-- 머지된 PR: #1 `feature/quick-return-and-bookcode-fix` (빠른 반납 패널, bookCode 필드 불일치 수정), #2 `refactor/split-page-components` (page.tsx를 Hero/Stats/Borrow/BookList 컴포넌트로 분리)
-- **현재 작업 브랜치**: `feature/book-list-improvements` — 도서 목록 검색/필터/더보기 UX 개선 (커밋 `1a2400e`, 아직 PR 미생성)
-- 로컬에 남은 다른 브랜치: `feature/quick-return-and-bookcode-fix`, `refactor/split-page-components` (둘 다 머지 완료, 정리 대상일 수 있음)
+- `main`이 베이스. feature 브랜치 → PR → 머지 패턴
+- 머지된 PR: #1 빠른 반납/bookCode 수정, #2 page.tsx 컴포넌트 분리, #3 도서 목록 UX 개선, #4~#5 문서 추가, #6 ops 정리, #7 디자인 토큰 코드화 + 메인 페이지 리뉴얼(B+C 절충 시안)
+- 머지 완료된 로컬 feature 브랜치는 정리됨 (2026-07 기준 main만 유지)
+- Vercel 연동 완료: PR마다 프리뷰 배포 자동 생성 (Deployment Protection 활성)
 
 ## 주요 파일 역할
 
@@ -53,6 +53,7 @@ docs/                     # 기획/디자인 문서 (BOOK_RENTAL_DESIGN_PACKAGE_
 - API 라우트는 항상 `{ ok: boolean, error?: string, books?/book? }` 형태로 응답하고 실패해도 HTTP 200 또는 500 + 에러 메시지로 응답
 - 상태(`BookStatus`)는 `available` / `borrowed` / `overdue` 세 가지만 존재, `getBookStatus`로만 판정 (borrower/dueDate 기반)
 - 타입/유틸은 `src/lib/book.ts`에 집중, 새 도서 관련 헬퍼 추가 시 이 파일에 추가
+- **디자인 토큰**: 컬러/라운딩은 `globals.css`의 `@theme` 토큰 유틸리티(`bg-canvas`, `text-ink`, `bg-brand`, `bg-overdue-soft`, `rounded-card` 등)만 사용. 임의 hex/기본 Tailwind 팔레트 직접 사용 금지 (docs/DESIGN_REFERENCE_GUIDE.md 참고)
 
 ## 자주 쓰는 명령어
 
@@ -65,9 +66,11 @@ npm run lint     # ESLint
 
 ## 현재 진행 중인 작업 및 다음 작업 목록
 
-- [x] 빠른 반납 패널 추가, bookCode 필드 불일치 수정 (PR #1)
-- [x] page.tsx를 컴포넌트 단위로 분리 (PR #2)
-- [x] 도서 목록 검색/필터/더보기 UX 개선 (`feature/book-list-improvements`, 커밋 `1a2400e`)
-- [ ] `feature/book-list-improvements` PR 생성 및 머지
-- [ ] 머지 완료된 로컬 브랜치(`feature/quick-return-and-bookcode-fix`, `refactor/split-page-components`) 정리 검토
-- [ ] `docs/BOOK_RENTAL_OPENCODE_ROADMAP_V1.md` 기준 다음 로드맵 항목 확인 필요
+기준 문서: `docs/BOOK_RENTAL_ROADMAP_V2.md` (기능 로드맵), `docs/DEPLOYMENT_PLAN_V1.md` (배포), `docs/DESIGN_REFERENCE_GUIDE.md` (디자인)
+
+- [x] 도서 목록 UX 개선, 컴포넌트 분리, 빠른 반납 (PR #1~#3)
+- [x] 디자인 토큰 코드화 + 메인 페이지 리뉴얼 프로토타입 (PR #7)
+- [ ] 디자인 후속: 키보드 단축키(`/` 검색, `S` 스캔, `N` 등록), 모바일 하단 고정 액션 바
+- [ ] 배포 1차 (DEPLOYMENT_PLAN §8): `.env.example` 추가, 목록 API 전화번호 노출 점검/마스킹, GitHub Actions CI, QA 체크리스트 수행
+- [ ] 로드맵 PHASE A: vitest 도입(`lib/book.ts` 테스트), 데이터 접근 계층 분리
+- [ ] 로드맵 PHASE B: Supabase 마이그레이션 (스키마 생성 → 데이터 이관 → API 교체)
