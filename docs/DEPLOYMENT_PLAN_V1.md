@@ -43,6 +43,8 @@ Next.js 16 App Router 기준 가장 마찰이 적다. 무료(Hobby) 플랜으로
 | 변수 | 단계 | 비고 |
 |---|---|---|
 | `APPS_SCRIPT_WEB_APP_URL` | 1차 | 서버 전용. 절대 `NEXT_PUBLIC_` 접두사 붙이지 말 것 |
+| `OPERATOR_ACCESS_CODE` | 1차 선택 | 운영자 PIN 접근 제한을 켤 때만 설정. `OPERATOR_ACCESS_COOKIE_SECRET`와 함께 설정해야 활성화 |
+| `OPERATOR_ACCESS_COOKIE_SECRET` | 1차 선택 | 운영자 접근 쿠키 서명용 서버 전용 secret. 충분히 긴 임의 문자열 사용 |
 | `NEXT_PUBLIC_SUPABASE_URL` | 2차 | 공개 가능 |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 2차 | 공개 가능 (RLS가 방어선) |
 | `SUPABASE_SERVICE_ROLE_KEY` | 2차 | **서버 전용, 유출 시 전체 DB 노출.** Route Handler에서만 사용 |
@@ -61,7 +63,7 @@ Next.js 16 App Router 기준 가장 마찰이 적다. 무료(Hobby) 플랜으로
 - [ ] Apps Script URL이 클라이언트 번들에 노출되지 않는지 확인 (`NEXT_PUBLIC_` 미사용 확인)
 - [ ] **접근 제한**: 인증이 없으므로 URL 유출 시 누구나 대여/반납 가능. 최소한 다음 중 하나 적용:
   - Vercel Deployment Protection (Password Protection — Pro 플랜) 또는
-  - 간단한 접근 코드(운영자 PIN) 미들웨어 — 임시방편임을 인지
+  - 간단한 접근 코드(운영자 PIN) 미들웨어 — `OPERATOR_ACCESS_CODE`, `OPERATOR_ACCESS_COOKIE_SECRET` 설정 시 활성화. 임시방편임을 인지
   - 또는 "내부 공유 금지 URL"로 운영하고 2차에서 인증 도입
 - [ ] Apps Script Web App 배포 설정 확인: "Anyone" 실행이면 시트 원본 권한은 별도임을 확인
 - [ ] 개인정보(이름/전화번호)를 다루므로: 도서 목록 API가 대여자 전화번호를 프론트로 내려보내는지 점검 → **목록 응답에서 phone 제거 또는 마스킹(010-****-1234)**
@@ -126,6 +128,7 @@ GitHub Actions (`.github/workflows/ci.yml`) — PR마다 자동 실행:
 - [ ] **에러 추적**: Sentry 무료 플랜 (`@sentry/nextjs`) — 운영자가 못 보는 프론트 에러 수집. 2차 배포 때 도입해도 됨
 - [ ] **Analytics**: Vercel Analytics(무료 기본) 정도면 충분. 사용 패턴(모바일 비율 등) 파악용
 - [ ] **가동 확인**: UptimeRobot 무료로 5분 간격 헬스체크 (선택)
+  - 헬스체크 URL: `/api/health` (`ok: true`면 필수 서버 환경변수와 운영자 PIN 설정 조합이 정상)
 - [ ] **백업**: 1차 = Google Sheets 자체가 원본. 2차 = Supabase 자동 백업(무료 플랜 7일) + 주 1회 CSV export 스크립트 검토
 
 ---
@@ -144,10 +147,11 @@ GitHub Actions (`.github/workflows/ci.yml`) — PR마다 자동 실행:
 1. .env.example 추가, .gitignore 확인          (커밋 1개)
 2. 목록 API의 전화번호 노출 점검/마스킹          (커밋 1개)
 3. GitHub Actions CI 추가                      (커밋 1개)
-4. Vercel 프로젝트 생성 + 환경변수 + 배포
-5. §4 QA 체크리스트 전체 수행 (특히 실기기 카메라 스캔)
-6. 운영자에게 URL 전달 + 사용법 1페이지 안내 (docs/USER_GUIDE.md 작성)
-7. 1~2주 실사용 피드백 수집 → 디자인/기능 백로그 반영
+4. 선택형 운영자 PIN 접근 제한 추가             (커밋 1개)
+5. Vercel 프로젝트 생성 + 환경변수 + 배포
+6. §4 QA 체크리스트 전체 수행 (특히 실기기 카메라 스캔) — 기록지: [DEPLOYMENT_QA_CHECKLIST_V1.md](DEPLOYMENT_QA_CHECKLIST_V1.md)
+7. 운영자에게 URL 전달 + 사용법 1페이지 안내 — 안내서: [USER_GUIDE.md](USER_GUIDE.md)
+8. 1~2주 실사용 피드백 수집 → 디자인/기능 백로그 반영
 ```
 
 ## 9. 배포 2차 게이트 (정식 오픈 조건)
