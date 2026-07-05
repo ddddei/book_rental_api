@@ -30,9 +30,9 @@ docs/                     # 기획/디자인 문서 (BOOK_RENTAL_DESIGN_PACKAGE_
 ## 현재 PR/브랜치 흐름
 
 - `main`이 베이스. feature 브랜치 → PR → 머지 패턴
-- 머지된 PR: #1 빠른 반납/bookCode 수정, #2 page.tsx 컴포넌트 분리, #3 도서 목록 UX 개선, #4~#5 문서 추가, #6 ops 정리, #7 디자인 토큰 코드화 + 메인 페이지 리뉴얼(B+C 절충 시안)
-- 머지 완료된 로컬 feature 브랜치는 정리됨 (2026-07 기준 main만 유지)
+- 머지된 PR: #1 빠른 반납/bookCode 수정, #2 page.tsx 컴포넌트 분리, #3 도서 목록 UX 개선, #4~#5 문서 추가, #6 ops 정리, #7 디자인 토큰 코드화 + 메인 페이지 리뉴얼(B+C 절충 시안), #12 배포 V1 통합 준비(#8~#11 통합), #13 운영자 PIN 리다이렉트 핫픽스, #14 배포 V1 실기기 QA 기록
 - Vercel 연동 완료: PR마다 프리뷰 배포 자동 생성 (Deployment Protection 활성)
+- **배포 1차(Soft Launch) 완료**: Production `https://book-rental-api-seven.vercel.app`, 운영자 PIN 접근 제한(`src/proxy.ts`), 목록 API 전화번호 마스킹, `/api/health`, GitHub Actions CI(lint/test/build), 실기기 QA 통과 — 기록: docs/DEPLOYMENT_HANDOFF_2026-07-05.md, docs/DEPLOYMENT_QA_CHECKLIST_V1.md
 
 ## 주요 파일 역할
 
@@ -70,7 +70,9 @@ npm run lint     # ESLint
 
 - [x] 도서 목록 UX 개선, 컴포넌트 분리, 빠른 반납 (PR #1~#3)
 - [x] 디자인 토큰 코드화 + 메인 페이지 리뉴얼 프로토타입 (PR #7)
+- [x] 배포 1차 (PR #12~#14): `.env.example`, 전화번호 마스킹, CI, 운영자 PIN, 실기기 QA 완료
+- [x] vitest 도입 (book/operatorAccess/deploymentReadiness 테스트 27개)
+- [ ] 배포 1차 후속: 1~2주 실사용 피드백 수집 → 백로그 반영 (DEPLOYMENT_PLAN §8-8)
 - [ ] 디자인 후속: 키보드 단축키(`/` 검색, `S` 스캔, `N` 등록), 모바일 하단 고정 액션 바
-- [ ] 배포 1차 (DEPLOYMENT_PLAN §8): `.env.example` 추가, 목록 API 전화번호 노출 점검/마스킹, GitHub Actions CI, QA 체크리스트 수행
-- [ ] 로드맵 PHASE A: vitest 도입(`lib/book.ts` 테스트), 데이터 접근 계층 분리
+- [ ] 로드맵 PHASE A 잔여: 데이터 접근 계층 분리 (fetch 호출을 단일 모듈로)
 - [ ] 로드맵 PHASE B: Supabase 마이그레이션 (스키마 생성 → 데이터 이관 → API 교체)
