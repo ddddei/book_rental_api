@@ -6,6 +6,7 @@ import {
 } from "@/lib/operatorAccess";
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 12;
+const FORM_REDIRECT_STATUS = 303;
 
 export async function POST(request: Request) {
   const state = getOperatorAccessState({
@@ -17,7 +18,9 @@ export async function POST(request: Request) {
   const redirectTo = getSafeRedirectPath(readFormValue(formData, "redirectTo"));
 
   if (state.kind === "disabled") {
-    return NextResponse.redirect(new URL(redirectTo, request.url));
+    return NextResponse.redirect(new URL(redirectTo, request.url), {
+      status: FORM_REDIRECT_STATUS,
+    });
   }
 
   if (state.kind === "misconfigured") {
@@ -28,7 +31,9 @@ export async function POST(request: Request) {
     return redirectToAccessPage(request, redirectTo, "invalid");
   }
 
-  const response = NextResponse.redirect(new URL(redirectTo, request.url));
+  const response = NextResponse.redirect(new URL(redirectTo, request.url), {
+    status: FORM_REDIRECT_STATUS,
+  });
   response.cookies.set({
     name: OPERATOR_ACCESS_COOKIE_NAME,
     value: await signOperatorAccessCode(state.code, state.secret),
@@ -59,5 +64,5 @@ function redirectToAccessPage(
   const url = new URL("/operator-access", request.url);
   url.searchParams.set("redirectTo", redirectTo);
   url.searchParams.set("error", error);
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(url, { status: FORM_REDIRECT_STATUS });
 }
