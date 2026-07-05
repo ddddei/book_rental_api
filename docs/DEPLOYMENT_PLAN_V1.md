@@ -2,7 +2,7 @@
 
 작성일: 2026-07-05
 목표: 실제 운영자가 매일 쓰는 서비스로 **완전 배포**하기 위한 전체 체크리스트.
-연계 문서: [BOOK_RENTAL_ROADMAP_V2.md](BOOK_RENTAL_ROADMAP_V2.md) (기능 로드맵), [DESIGN_REFERENCE_GUIDE.md](DESIGN_REFERENCE_GUIDE.md) (디자인)
+연계 문서: [BOOK_RENTAL_ROADMAP_V2.md](BOOK_RENTAL_ROADMAP_V2.md) (기능 로드맵), [DESIGN_REFERENCE_GUIDE.md](DESIGN_REFERENCE_GUIDE.md) (디자인), [DEPLOYMENT_HANDOFF_2026-07-05.md](DEPLOYMENT_HANDOFF_2026-07-05.md) (배포 1차 운영 인수인계 기록)
 
 ---
 
@@ -129,6 +129,8 @@ GitHub Actions (`.github/workflows/ci.yml`) — PR마다 자동 실행:
 - [ ] **Analytics**: Vercel Analytics(무료 기본) 정도면 충분. 사용 패턴(모바일 비율 등) 파악용
 - [ ] **가동 확인**: UptimeRobot 무료로 5분 간격 헬스체크 (선택)
   - 헬스체크 URL: `/api/health` (`ok: true`면 필수 서버 환경변수와 운영자 PIN 설정 조합이 정상)
+  - 배포 스모크 체크: `npm run check:deployment:v1`
+  - 운영자 PIN 활성화 후 필수 확인: `REQUIRE_OPERATOR_ACCESS=1 npm run check:deployment:v1`
 - [ ] **백업**: 1차 = Google Sheets 자체가 원본. 2차 = Supabase 자동 백업(무료 플랜 7일) + 주 1회 CSV export 스크립트 검토
 
 ---
