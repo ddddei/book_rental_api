@@ -6,7 +6,11 @@ import {
   verifyOperatorAccessCookie,
 } from "@/lib/operatorAccess";
 
-const PUBLIC_PATH_PREFIXES = ["/operator-access", "/api/operator-access"] as const;
+const PUBLIC_PATH_PREFIXES = [
+  "/operator-access",
+  "/api/operator-access",
+  "/api/health",
+] as const;
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],

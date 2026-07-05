@@ -128,6 +128,7 @@ GitHub Actions (`.github/workflows/ci.yml`) — PR마다 자동 실행:
 - [ ] **에러 추적**: Sentry 무료 플랜 (`@sentry/nextjs`) — 운영자가 못 보는 프론트 에러 수집. 2차 배포 때 도입해도 됨
 - [ ] **Analytics**: Vercel Analytics(무료 기본) 정도면 충분. 사용 패턴(모바일 비율 등) 파악용
 - [ ] **가동 확인**: UptimeRobot 무료로 5분 간격 헬스체크 (선택)
+  - 헬스체크 URL: `/api/health` (`ok: true`면 필수 서버 환경변수와 운영자 PIN 설정 조합이 정상)
 - [ ] **백업**: 1차 = Google Sheets 자체가 원본. 2차 = Supabase 자동 백업(무료 플랜 7일) + 주 1회 CSV export 스크립트 검토
 
 ---
