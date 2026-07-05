@@ -145,8 +145,8 @@ GitHub Actions (`.github/workflows/ci.yml`) — PR마다 자동 실행:
 2. 목록 API의 전화번호 노출 점검/마스킹          (커밋 1개)
 3. GitHub Actions CI 추가                      (커밋 1개)
 4. Vercel 프로젝트 생성 + 환경변수 + 배포
-5. §4 QA 체크리스트 전체 수행 (특히 실기기 카메라 스캔)
-6. 운영자에게 URL 전달 + 사용법 1페이지 안내 (docs/USER_GUIDE.md 작성)
+5. §4 QA 체크리스트 전체 수행 (특히 실기기 카메라 스캔) — 기록지: [DEPLOYMENT_QA_CHECKLIST_V1.md](DEPLOYMENT_QA_CHECKLIST_V1.md)
+6. 운영자에게 URL 전달 + 사용법 1페이지 안내 — 안내서: [USER_GUIDE.md](USER_GUIDE.md)
 7. 1~2주 실사용 피드백 수집 → 디자인/기능 백로그 반영
 ```
 
