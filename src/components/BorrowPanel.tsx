@@ -45,6 +45,7 @@ export function BorrowPanel({
   availableTitleOptions,
   recentBorrowed,
   handleReturn,
+  borrowerInputRef,
 }: {
   borrowMode: BorrowMode;
   setBorrowMode: (mode: BorrowMode) => void;
@@ -80,6 +81,7 @@ export function BorrowPanel({
   availableTitleOptions: Array<{ label: string; value: string }>;
   recentBorrowed: EnrichedBook[];
   handleReturn: (bookCode: string, bookId?: number) => void;
+  borrowerInputRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   const isMember = borrowMode === "member";
 
@@ -123,6 +125,7 @@ export function BorrowPanel({
           value={borrower}
           onChange={setBorrower}
           placeholder="이름을 입력하세요"
+          inputRef={borrowerInputRef}
         />
 
         <Input
@@ -181,7 +184,16 @@ export function BorrowPanel({
                   disabled={cameraLoading}
                   className="w-full rounded-field bg-brand-soft py-3 text-sm font-medium text-brand-mid transition hover:bg-brand-soft/70 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {cameraLoading ? "카메라 준비 중..." : "카메라로 바코드 스캔"}
+                  {cameraLoading ? (
+                    "카메라 준비 중..."
+                  ) : (
+                    <>
+                      카메라로 바코드 스캔
+                      <kbd className="ml-1.5 hidden items-center rounded border border-line bg-surface px-1.5 py-0.5 font-sans text-[10px] font-normal text-ink-faint sm:inline-flex">
+                        S
+                      </kbd>
+                    </>
+                  )}
                 </button>
               ) : (
                 <button

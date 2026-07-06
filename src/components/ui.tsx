@@ -93,6 +93,7 @@ export function Input({
   placeholder,
   type = "text",
   min,
+  inputRef,
 }: {
   label: string;
   value: string;
@@ -100,6 +101,7 @@ export function Input({
   placeholder?: string;
   type?: string;
   min?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
     <label className="block">
@@ -107,6 +109,7 @@ export function Input({
         {label}
       </span>
       <input
+        ref={inputRef}
         type={type}
         min={min}
         value={value}

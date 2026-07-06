@@ -17,9 +17,11 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 function DebouncedSearchInput({
   value,
   onChange,
+  inputRef,
 }: {
   value: string;
   onChange: (value: string) => void;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   const [draft, setDraft] = useState(value);
 
@@ -39,13 +41,19 @@ function DebouncedSearchInput({
   }, [draft]);
 
   return (
-    <input
-      type="text"
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      placeholder="도서명, 저자, 대여자, 코드 검색"
-      className="w-full rounded-full border border-line bg-surface-soft px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-soft"
-    />
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="도서명, 저자, 대여자, 코드 검색"
+        className="w-full rounded-full border border-line bg-surface-soft px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-soft"
+      />
+      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center rounded border border-line bg-surface px-1.5 py-0.5 font-sans text-[10px] text-ink-faint sm:flex">
+        /
+      </kbd>
+    </div>
   );
 }
 
@@ -90,6 +98,7 @@ export function BookListPanel({
   statusCounts,
   submitting,
   handleReturn,
+  searchInputRef,
 }: {
   query: string;
   setQuery: (value: string) => void;
@@ -111,6 +120,7 @@ export function BookListPanel({
   };
   submitting: boolean;
   handleReturn: (bookCode: string, bookId?: number) => void;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   const filterTabs: Array<{
     label: string;
@@ -128,7 +138,11 @@ export function BookListPanel({
       <div className="flex flex-col gap-2.5">
         <div className="flex gap-2">
           <div className="min-w-0 flex-1">
-            <DebouncedSearchInput value={query} onChange={setQuery} />
+            <DebouncedSearchInput
+              value={query}
+              onChange={setQuery}
+              inputRef={searchInputRef}
+            />
           </div>
           <button
             type="button"

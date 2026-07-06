@@ -40,6 +40,9 @@ export function AppHeader() {
           className="rounded-full bg-brand px-4 py-2 text-xs font-medium text-white transition hover:bg-brand-hover"
         >
           + 대여 등록
+          <kbd className="ml-1.5 hidden items-center rounded border border-line bg-surface px-1.5 py-0.5 font-sans text-[10px] font-normal text-ink-faint sm:inline-flex">
+            N
+          </kbd>
         </a>
       </div>
     </header>
