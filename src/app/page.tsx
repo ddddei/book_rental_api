@@ -17,6 +17,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { StatsSection } from "@/components/StatsSection";
 import { BorrowPanel } from "@/components/BorrowPanel";
 import { BookListPanel } from "@/components/BookListPanel";
+import { MobileActionBar } from "@/components/MobileActionBar";
 import type { Html5Qrcode } from "html5-qrcode";
 
 export default function HomePage() {
@@ -435,6 +436,21 @@ export default function HomePage() {
     startCameraRef.current = startCamera;
   });
 
+  function triggerScan() {
+    setBookInputMode("barcode");
+    startCameraRef.current();
+    document
+      .getElementById("borrow-panel")
+      ?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function focusBorrowForm() {
+    document
+      .getElementById("borrow-panel")
+      ?.scrollIntoView({ behavior: "smooth" });
+    borrowerInputRef.current?.focus({ preventScroll: true });
+  }
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) {
@@ -461,19 +477,12 @@ export default function HomePage() {
       }
 
       if (event.key === "s" || event.key === "S") {
-        setBookInputMode("barcode");
-        startCameraRef.current();
-        document
-          .getElementById("borrow-panel")
-          ?.scrollIntoView({ behavior: "smooth" });
+        triggerScan();
         return;
       }
 
       if (event.key === "n" || event.key === "N") {
-        document
-          .getElementById("borrow-panel")
-          ?.scrollIntoView({ behavior: "smooth" });
-        borrowerInputRef.current?.focus({ preventScroll: true });
+        focusBorrowForm();
       }
     }
 
@@ -484,7 +493,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-canvas">
       <AppHeader />
-      <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-10">
         <HeroSection />
 
         <StatsSection stats={stats} />
@@ -553,6 +562,8 @@ export default function HomePage() {
           />
         </section>
       </div>
+
+      <MobileActionBar onScan={triggerScan} onBorrow={focusBorrowForm} />
     </main>
   );
 }
