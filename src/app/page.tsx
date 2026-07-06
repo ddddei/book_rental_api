@@ -12,6 +12,11 @@ import {
   normalizeCode,
   normalizePhone,
 } from "@/lib/book";
+import {
+  borrowBook,
+  fetchBooks as fetchBooksApi,
+  returnBook,
+} from "@/lib/api";
 import { AppHeader } from "@/components/AppHeader";
 import { HeroSection } from "@/components/HeroSection";
 import { StatsSection } from "@/components/StatsSection";
@@ -59,18 +64,9 @@ export default function HomePage() {
       setLoading(true);
       setErrorMessage("");
 
-      const response = await fetch("/api/books", {
-        method: "GET",
-        cache: "no-store",
-      });
+      const nextBooks = await fetchBooksApi();
 
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "도서 목록을 불러오지 못했습니다.");
-      }
-
-      setBooks(data.books ?? []);
+      setBooks(nextBooks);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -187,28 +183,7 @@ export default function HomePage() {
     try {
       setSubmitting(true);
 
-      const response = await fetch("/api/books", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          borrowerType: payload.borrowerType,
-          memberCode: payload.memberCode || "",
-          borrower: payload.borrower,
-          phone: payload.phone || "",
-          borrowedAt: payload.borrowedAt,
-          dueDate: payload.dueDate,
-          bookCode: payload.bookCode || "",
-          bookTitle: payload.bookTitle || "",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "대여 등록에 실패했습니다.");
-      }
+      await borrowBook(payload);
 
       await fetchBooks();
 
@@ -330,22 +305,7 @@ export default function HomePage() {
       setMessage("");
       setErrorMessage("");
 
-      const response = await fetch("/api/books", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          bookCode,
-          id: bookId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "반납 처리에 실패했습니다.");
-      }
+      await returnBook(bookCode, bookId);
 
       await fetchBooks();
       setMessage(`반납 처리가 완료되었습니다: ${bookCode}`);
