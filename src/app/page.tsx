@@ -17,6 +17,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { StatsSection } from "@/components/StatsSection";
 import { BorrowPanel } from "@/components/BorrowPanel";
 import { BookListPanel } from "@/components/BookListPanel";
+import { MobileActionBar } from "@/components/MobileActionBar";
 import type { Html5Qrcode } from "html5-qrcode";
 
 export default function HomePage() {
@@ -48,6 +49,10 @@ export default function HomePage() {
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerRegionId = "reader";
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const borrowerInputRef = useRef<HTMLInputElement | null>(null);
+  const startCameraRef = useRef<() => void>(() => {});
 
   async function fetchBooks() {
     try {
@@ -427,10 +432,68 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    startCameraRef.current = startCamera;
+  });
+
+  function triggerScan() {
+    setBookInputMode("barcode");
+    startCameraRef.current();
+    document
+      .getElementById("borrow-panel")
+      ?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function focusBorrowForm() {
+    document
+      .getElementById("borrow-panel")
+      ?.scrollIntoView({ behavior: "smooth" });
+    borrowerInputRef.current?.focus({ preventScroll: true });
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+
+      if (event.key === "/") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (event.key === "s" || event.key === "S") {
+        triggerScan();
+        return;
+      }
+
+      if (event.key === "n" || event.key === "N") {
+        focusBorrowForm();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <main className="min-h-screen bg-canvas">
       <AppHeader />
-      <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-10">
         <HeroSection />
 
         <StatsSection stats={stats} />
@@ -471,6 +534,7 @@ export default function HomePage() {
             availableTitleOptions={availableTitleOptions}
             recentBorrowed={recentBorrowed}
             handleReturn={handleReturn}
+            borrowerInputRef={borrowerInputRef}
           />
 
           <BookListPanel
@@ -494,9 +558,12 @@ export default function HomePage() {
             }}
             submitting={submitting}
             handleReturn={handleReturn}
+            searchInputRef={searchInputRef}
           />
         </section>
       </div>
+
+      <MobileActionBar onScan={triggerScan} onBorrow={focusBorrowForm} />
     </main>
   );
 }
